@@ -1,2 +1,2 @@
-# SaraSantosPilates
-Sara Santos Pilates App Gestão
+# SaraPilatesGestao
+Gestão do estúdio de Pilates

@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sara Pilates">
+<meta name="theme-color" content="#7b4fb5">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<title>Sara Santos Pilates - Gestão de Alunos e Financeiro</title>
+<style>
+  :root{
+    --bg:#e6d8f6;
+    --surface:#ffffff;
+    --ink:#2b2440;
+    --muted:#6b6480;
+    --line:#e4dced;
+    --brand:#7b4fb5;
+    --brand-dark:#5e3a8c;
+    --pago-bg:#fdecec;      /* PAGO = vermelho (decisao confirmada) */
+    --pago-border:#e74c3c;
+    --pago-ink:#a12722;
+    --pend-bg:#efe1fb;      /* PENDENTE = lilas/roxo claro */
+    --pend-border:#9b59d0;
+    --pend-ink:#6a2f9e;
+    --green:#2e9e5b;
+    --red:#e74c3c;
+    --shadow:0 2px 10px rgba(70,40,110,.08);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    font-size:17px;line-height:1.35;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  h1,h2,h3{margin:0 0 .4em;font-weight:700;}
+  button{font-family:inherit;font-size:16px;cursor:pointer;border:none;background:none;color:inherit;}
+  input,select{font-family:inherit;font-size:16px;color:var(--ink);}
+
+  /* ===== Header / Nav ===== */
+  header{
+    position:sticky;top:0;z-index:50;background:var(--brand);color:#fff;
+    padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;box-shadow:var(--shadow);
+  }
+  .head-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .head-top .title{font-size:19px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:10px;}
+  .head-top .title .logo{width:42px;height:42px;border-radius:50%;background:#fff;object-fit:contain;padding:4px;flex:0 0 auto;box-shadow:0 2px 6px rgba(0,0,0,.18);}
+  .save-ind{font-size:13px;background:rgba(255,255,255,.18);padding:7px 12px;border-radius:999px;white-space:nowrap;}
+  .save-ind.dirty{background:rgba(255,255,255,.30);}
+  .head-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .year-sel{font-size:15px;font-weight:800;color:#fff;background:rgba(255,255,255,.20);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;min-height:38px;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:center;}
+  .year-sel option{color:#221a33;}
+  .cfg-btn{width:38px;height:38px;min-height:38px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:19px;line-height:1;color:#fff;background:rgba(255,255,255,.15);border:2px solid #fff;border-radius:50%;cursor:pointer;padding:0;}
+  .cfg-btn.active{background:#fff;color:var(--brand-dark);}
+  nav{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+  nav button{
+    flex:0 0 auto;background:rgba(255,255,255,.14);color:#fff;padding:11px 18px;border-radius:999px;
+    font-weight:600;min-height:44px;
+  }
+  nav button.active{background:#fff;color:var(--brand-dark);}
+  nav button.nav-agenda{background:#8fd4a3;color:#1c4d31;font-weight:800;box-shadow:0 2px 8px rgba(80,170,110,.35);}
+  nav button.nav-agenda.active{background:#71c68b;color:#153d26;box-shadow:0 0 0 2px rgba(255,255,255,.9) inset,0 2px 8px rgba(80,170,110,.35);}
+
+  /* ===== Layout ===== */
+  main{max-width:1100px;margin:0 auto;padding:16px;}
+  .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px;}
+  .section-title{font-size:16px;color:#120d22;margin-bottom:10px;font-weight:800;letter-spacing:0;}
+
+  /* ===== Buttons ===== */
+  .btn{background:var(--brand);color:#fff;padding:13px 20px;border-radius:12px;font-weight:700;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{background:#eee6f5;color:var(--brand-dark);}
+  .btn.ghost{background:transparent;color:var(--brand-dark);border:2px solid var(--line);}
+  .btn.danger{background:var(--red);color:#fff;}
+  .btn.block{width:100%;}
+  .btn[disabled]{opacity:.4;pointer-events:none;}
+
+  /* ===== Indicators ===== */
+  .grid{display:grid;gap:7px;}
+  .grid.cards{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));}
+  .ind{background:var(--surface);border-radius:10px;box-shadow:0 1px 4px rgba(70,40,110,.07);padding:6px 9px;border-left:3px solid var(--brand);min-width:0;overflow:hidden;}
+  .ind .lbl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:1px;line-height:1.12;}
+  .ind .val{font-size:13px;font-weight:800;line-height:1.18;white-space:nowrap;letter-spacing:-.2px;font-variant-numeric:tabular-nums;}
+  .ind .val .cur{font-size:9px;font-weight:700;opacity:.75;margin-right:1px;vertical-align:.5px;}
+  .ind.pos{border-left-color:var(--green);} .ind.pos .val{color:var(--green);}
+  .ind.neg{border-left-color:var(--red);} .ind.neg .val{color:var(--red);}
+  .ind.accent{border-left-color:var(--brand);}
+
+  /* ===== Month selector ===== */
+  .month-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .month-bar select{flex:1;min-width:150px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:18px;min-height:48px;}
+  .month-bar .nav-arrow{background:#eee6f5;color:var(--brand-dark);width:48px;height:48px;border-radius:12px;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+
+  /* ===== Aluno cards ===== */
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .search{flex:1;min-width:180px;position:relative;}
+  .search input{width:100%;padding:12px 14px 12px 40px;border-radius:12px;border:2px solid var(--line);background:#fff;min-height:48px;}
+  .search:before{content:"\1F50E";position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.5;}
+  /* ===== Alunos: lista (uma linha por aluno) ===== */
+  .aluno-list{display:flex;flex-direction:column;gap:10px;}
+  .aluno{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;padding:10px 12px;border:2px solid var(--line);background:#fff;border-left-width:8px;}
+  .aluno.pago{background:var(--pago-bg);border-color:var(--pago-border);border-left-color:var(--pago-border);}
+  .aluno.pend{background:var(--pend-bg);border-color:var(--pend-border);border-left-color:var(--pend-border);}
+  .aluno .nome{flex:1 1 auto;min-width:120px;font-weight:800;font-size:18px;color:#221a33;text-transform:capitalize;border:none;background:transparent;padding:9px 6px;border-bottom:2px dashed transparent;}
+  .aluno .nome:focus{outline:none;border-bottom-color:var(--brand);}
+  .aluno .f{padding:9px 10px;border-radius:10px;border:2px solid var(--line);background:#fff;min-height:46px;flex:0 0 auto;}
+  .aluno .f-dias{width:auto;}
+  .aluno .f-valor{width:112px;text-align:right;}
+  .aluno .f-forma{width:auto;}
+  .aluno .f.warn{border-color:var(--red);background:#fff6f6;}
+  .aluno .actions{display:flex;gap:6px;flex:0 0 auto;}
+  .st-btn{padding:10px 14px;border-radius:10px;font-weight:700;min-height:46px;border:2px solid var(--line);background:#fff;color:var(--muted);white-space:nowrap;}
+  .st-btn.on-pago{background:var(--pago-border);color:#fff;border-color:var(--pago-border);}
+  .st-btn.on-pend{background:var(--pend-border);color:#fff;border-color:var(--pend-border);}
+  /* switch de status do aluno (aberto -> pago) */
+  .st-switch{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;border:none;background:transparent;cursor:pointer;padding:6px 4px;min-height:46px;-webkit-appearance:none;appearance:none;}
+  .st-track{position:relative;width:52px;height:28px;border-radius:14px;background:#c9c1d8;transition:background .15s;flex:0 0 auto;}
+  .st-track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:left .15s;}
+  .st-switch.pago .st-track{background:var(--pago-border);}
+  .st-switch.pago .st-track::after{left:27px;}
+  .st-switch-label{font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--muted);white-space:nowrap;}
+  .st-switch.pago .st-switch-label{color:var(--pago-border);}
+  .icon-btn{width:46px;height:46px;border-radius:10px;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .icon-btn.del{color:var(--red);}
+
+  /* ===== Finance lists (linha colorida por status) ===== */
+  .line-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:8px;border-radius:10px;border:2px solid var(--line);border-left-width:8px;background:#fff;}
+  .line-item.pago{background:var(--pago-bg);border-color:var(--pago-border);border-left-color:var(--pago-border);}
+  .line-item.pend{background:var(--pend-bg);border-color:var(--pend-border);border-left-color:var(--pend-border);}
+  .line-item input{padding:10px;border-radius:10px;border:2px solid var(--line);background:#fff;min-height:44px;}
+  .line-item .li-desc{flex:1 1 200px;min-width:150px;}
+  .line-item .li-valor{flex:0 0 130px;}
+  .line-item .st-toggle{padding:10px 14px;border-radius:999px;font-weight:800;font-size:13px;min-height:44px;border:2px solid transparent;white-space:nowrap;color:#fff;}
+  .st-toggle.pago{background:var(--pago-border);}
+  .st-toggle.pend{background:var(--pend-border);}
+  .line-item .icon-btn{margin-left:auto;}
+  @media(max-width:560px){
+    .line-item .li-valor{flex:1 1 100px;}
+    .line-item .st-toggle{margin-left:auto;}
+  }
+  /* ===== Poupança ===== */
+  .poup-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:8px;border-radius:10px;border:2px solid var(--line);border-left-width:8px;background:#fff;}
+  .poup-item.dep{border-left-color:#2e7d46;}
+  .poup-item.saque{border-left-color:#e67e22;}
+  .poup-item input{padding:10px;border-radius:10px;border:2px solid var(--line);background:#fff;min-height:44px;}
+  .poup-item .li-desc{flex:1 1 180px;min-width:140px;}
+  .poup-item .li-valor{flex:0 0 130px;}
+  .poup-item .icon-btn{margin-left:auto;}
+  .poup-tag{flex:0 0 auto;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;letter-spacing:.5px;}
+  .poup-item.dep .poup-tag{background:#dff0e4;color:#1f6b3a;}
+  .poup-item.saque .poup-tag{background:#fdead2;color:#8a5a12;}
+  .poup-bal{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:#efe7fb;border:2px solid #d9c9f2;margin-bottom:10px;}
+  .poup-bal .lbl{font-weight:700;color:var(--ink);}
+  .poup-bal .val{font-weight:800;font-size:18px;}
+  .poup-bal.neg .val{color:var(--pend-border,#b23b3b);}
+  .ind.poup{border-left-color:#5aa0d6;}
+  @media(max-width:560px){ .poup-item .li-valor{flex:1 1 100px;} }
+
+  /* ===== Table (Caixa) ===== */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{width:100%;border-collapse:collapse;min-width:560px;}
+  th,td{padding:12px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);font-weight:700;}
+  thead th{background:#f0e9f8;color:var(--brand-dark);font-size:13px;text-transform:uppercase;letter-spacing:.4px;}
+  tr.total-row td{font-weight:800;background:#f0e9f8;border-top:2px solid var(--brand);}
+  td.warn{color:var(--red);font-weight:700;}
+  .row-click{cursor:pointer;} .row-click:active{background:#faf6ff;}
+
+  /* ===== Gráficos (SVG) ===== */
+  .chart{width:100%;height:auto;display:block;}
+  .c-grid{stroke:#e4dced;stroke-width:1;}
+  .c-xlab{font-size:16px;fill:#6b6480;}
+  .c-ylab{font-size:14px;fill:#6b6480;}
+  .c-vlab{font-size:12px;font-weight:800;}
+  .c-vlab.line{font-size:10.5px;}
+  .chart-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px;font-size:14px;font-weight:600;color:var(--ink);}
+  .chart-legend .lg{display:flex;align-items:center;gap:7px;}
+  .chart-legend i{width:15px;height:15px;border-radius:4px;display:inline-block;}
+
+  /* ===== Backup por texto ===== */
+  .ta-backup{width:100%;box-sizing:border-box;min-height:120px;margin-top:10px;padding:10px;border:2px solid var(--line);border-radius:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;background:#fff;resize:vertical;-webkit-user-select:text;user-select:text;}
+
+  /* ===== Config ===== */
+  .cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .cfg-item label{font-size:13px;color:var(--muted);font-weight:600;display:block;margin-bottom:5px;}
+  .cfg-item input{width:100%;padding:12px;border-radius:12px;border:2px solid var(--line);min-height:48px;font-weight:700;font-size:18px;}
+  .cfg-mens{grid-template-columns:repeat(4,1fr);gap:8px;}
+  .cfg-mens .cfg-item{min-width:0;}
+  .cfg-mens .cfg-item label{font-size:12px;margin-bottom:3px;}
+  .cfg-mens .cfg-item input{padding:9px 8px;min-height:42px;font-size:14px;}
+  .pill{display:inline-block;background:#eee6f5;color:var(--brand-dark);padding:8px 14px;border-radius:999px;font-weight:700;margin:0 8px 8px 0;}
+  .hint{font-size:13px;color:var(--muted);margin-top:8px;}
+
+  /* ===== Modal ===== */
+  .overlay{position:fixed;inset:0;background:rgba(43,36,64,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100;}
+  .modal{background:#fff;border-radius:18px;padding:22px;max-width:420px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .modal.modal-wide{max-width:600px;}
+  .modal h3{font-size:19px;}
+  .modal p{color:var(--muted);}
+  .modal input{width:100%;padding:13px;border-radius:12px;border:2px solid var(--line);min-height:50px;margin-top:12px;font-size:17px;}
+  .modal .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .modal .modal-actions .btn{flex:1;}
+
+  /* ===== Agenda ===== */
+  .ag-topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .ag-topbar .nav-arrow{background:#eee6f5;color:var(--brand-dark);width:46px;height:46px;border-radius:12px;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .ag-title{flex:1;text-align:center;font-size:18px;font-weight:800;color:#120d22;}
+  .ag-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .ag-actions .btn{padding:11px 14px;min-height:46px;font-size:15px;}
+  .ag-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .ag-table{width:100%;border-collapse:separate;border-spacing:0;min-width:760px;table-layout:fixed;}
+  .ag-table th,.ag-table td{border:1px solid var(--line);}
+  .ag-table thead th{background:#f1e8fb;padding:6px;}
+  .ag-day{font-weight:800;color:#120d22;text-align:center;font-size:13px;white-space:nowrap;}
+  .ag-time,.ag-corner{width:96px;}
+  .ag-time{background:#f1e8fb;font-weight:900;color:#120d22;text-align:center;vertical-align:middle;font-size:18px;letter-spacing:.3px;}
+  .ag-corner{background:#fff;}
+  .ag-corner-in{display:flex;align-items:center;gap:6px;justify-content:center;}
+  .ag-corner-in img{width:30px;height:30px;object-fit:contain;flex:0 0 auto;}
+  .ag-brand{display:flex;flex-direction:column;line-height:1.05;font-weight:800;color:var(--brand-dark);font-size:13px;}
+  .ag-cell{vertical-align:top;padding:0;background:#fff;}
+  .ag-line{border-bottom:1px solid var(--line);display:flex;align-items:center;}
+  .ag-line:last-child{border-bottom:none;}
+  .ag-name{flex:1;min-width:0;border:none;padding:6px 5px;font-size:14px;min-height:32px;background:transparent;color:var(--ink);display:block;}
+  .ag-name:focus{outline:none;background:transparent;}
+  /* interruptor de presença por linha (neutro → veio → faltou) */
+  .ag-att{flex:0 0 auto;width:40px;height:22px;border-radius:11px;border:none;margin:0 6px 0 4px;background:#cbc3d9;position:relative;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none;}
+  .ag-att::after{content:"";position:absolute;top:2px;left:11px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.35);transition:left .15s,background .15s;}
+  .ag-att.on{background:#2e7d46;}
+  .ag-att.on::after{left:20px;}
+  .ag-att.off{background:#d9534f;}
+  .ag-att.off::after{left:2px;}
+  .ag-table .ag-cell .ag-line.att-on{background:#2e7d46;}
+  .ag-line.att-on .ag-name{color:#fff;font-weight:800;}
+  .ag-line.att-on .ag-name::placeholder{color:#d8ecdf;}
+  .ag-table .ag-cell .ag-line.att-off{background:#f6bcbc;}
+  .ag-line.att-off .ag-name{color:#7a1f1f;}
+  .ag-cell.closed{background:var(--brand);padding:0;}
+  .ag-closed-tag{display:flex;align-items:center;justify-content:center;gap:6px;color:#fff;font-weight:800;font-size:13px;min-height:100px;letter-spacing:.5px;pointer-events:none;}
+  /* destaque cruzado (linha + coluna) ao focar uma célula */
+  .ag-hl-col{box-shadow:inset 2px 0 0 0 var(--brand),inset -2px 0 0 0 var(--brand);}
+  .ag-hl-row{box-shadow:inset 0 2px 0 0 var(--brand),inset 0 -2px 0 0 var(--brand);}
+  .ag-hl-col.ag-hl-row{box-shadow:inset 2px 2px 0 0 var(--brand),inset -2px -2px 0 0 var(--brand);}
+  .ag-table th.ag-hl-head{background:#8fd4a3;color:#153d26;}
+  .ag-table .ag-line.ag-hl-line{background:#8fd4a3;}
+  .modal select{width:100%;padding:12px;border-radius:12px;border:2px solid var(--line);min-height:48px;margin-top:6px;font-size:16px;background:#fff;}
+  .modal .mlbl{display:block;margin-top:12px;font-weight:700;font-size:14px;color:var(--ink);}
+  .ag-openlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 10px;margin-top:8px;padding:2px;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+  .ag-openrow{display:flex;align-items:center;gap:8px;padding:8px 8px;border:1px solid var(--line);border-radius:8px;background:#faf7fe;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;}
+  .ag-openrow input{width:20px;height:20px;flex:0 0 auto;}
+
+  /* ===== Reminder (backup) ===== */
+  .reminder{border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:14px;line-height:1.4;border:1.5px solid var(--line);}
+  .reminder.warn{background:#fff7e6;border-color:#f0c675;color:#7a5200;}
+  .reminder.ok{background:#e9f7ee;border-color:#bfe6cd;color:#256b40;}
+
+  /* ===== Toast ===== */
+  #toasts{position:fixed;left:0;right:0;bottom:24px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:200;pointer-events:none;}
+  .toast{background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:pop .2s ease;}
+  @keyframes pop{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-top">
+    <div class="title"><img class="logo" src="data:image/png;base64,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" alt="Sara Santos Pilates"><span>Sara Santos Pilates — Gestão</span></div>
+    <div class="head-right">
+      <select id="yearSel" class="year-sel" aria-label="Ano"></select>
+      <button id="cfgBtn" class="cfg-btn" data-view="config" aria-label="Configurações" title="Configurações">⚙</button>
+      <div id="saveInd" class="save-ind">✓ Salvo</div>
+    </div>
+  </div>
+  <nav id="nav">
+    <button data-action="nav" data-view="dashboard">Dashboard</button>
+    <button data-action="nav" data-view="alunos">Alunos</button>
+    <button data-action="nav" data-view="caixa">Caixa</button>
+    <button data-action="nav" data-view="fechamento">Fechamento</button>
+    <button data-action="nav" data-view="agenda" class="nav-agenda">📅 Agenda</button>
+  </nav>
+</header>
+<main id="app"></main>
+<div id="toasts"></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   Pilates Manager — app 100% local, single-file, IndexedDB.
+   Dinheiro em CENTAVOS (inteiros) para evitar erro de ponto flutuante.
+   ========================================================================= */
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
+const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
+const START_YEAR = 2026;
+const APP_VERSION = "2.7";
+const APP_BUILD = "26/07/2026";
+const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
+const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
+
+let db = null;
+let state = null;          // { config:{1..4}, meses:[12] }
+let view = "dashboard";
+let curMonth = new Date().getMonth();
+let curYear = Math.max(START_YEAR, new Date().getFullYear());
+let agWeekMon = null;      // Date: segunda-feira da semana exibida na Agenda
+let saveTimer = null;
+let storageMode = "mem";   // 'idb' | 'ls' | 'mem'
+function withTimeout(promise, ms){ return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")), ms))]); }
+
+/* ---------- Utils ---------- */
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function fmt(cents){ if(cents==null||isNaN(cents)) return ""; return (cents/100).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function fmt0(cents){ return (( cents||0)/100).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function fmtCard(cents){ return fmt0(cents).replace(/(R\$)\s?/, '<span class="cur">$1</span> '); }
+function parseCents(str){
+  if(typeof str === "number") return Math.round(str*100);
+  if(str==null) return null;
+  let s = String(str).trim().replace(/[R$\s]/g,"");
+  if(s==="") return null;
+  if(s.indexOf(",")>=0){ s = s.replace(/\./g,"").replace(",","."); }
+  const n = parseFloat(s);
+  if(isNaN(n)) return null;
+  return Math.round(n*100);
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- IndexedDB (single key store) ---------- */
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open("pilates_db", 1);
+    r.onupgradeneeded = e => { const d=e.target.result; if(!d.objectStoreNames.contains("kv")) d.createObjectStore("kv"); };
+    r.onsuccess = e => res(e.target.result);
+    r.onerror  = e => rej(e.target.error);
+  });
+}
+function dbGet(key){
+  return new Promise((res,rej)=>{ const t=db.transaction("kv","readonly").objectStore("kv").get(key); t.onsuccess=()=>res(t.result); t.onerror=()=>rej(t.error); });
+}
+function dbSet(key,val){
+  return new Promise((res,rej)=>{ const t=db.transaction("kv","readwrite").objectStore("kv").put(val,key); t.onsuccess=()=>res(); t.onerror=()=>rej(t.error); });
+}
+
+/* ---------- State ---------- */
+function emptyMonth(){ return { alunos:[], receitasExtras:[], despesas:[], poupanca:[] }; }
+function emptyYear(){ return { meses: Array.from({length:12}, emptyMonth) }; }
+function initState(){ state = { meta:{lastBackup:null,lastAutoBackup:null}, config:{...DEFAULT_CONFIG}, anos:{ [START_YEAR]: emptyYear() }, agenda:{weeks:{}} }; }
+function ensureShape(){
+  if(!state) initState();
+  if(!state.meta || typeof state.meta!=="object") state.meta = {};
+  if(!("lastBackup" in state.meta)) state.meta.lastBackup = null;
+  if(!("lastAutoBackup" in state.meta)) state.meta.lastAutoBackup = null;
+  if(!state.config) state.config = {...DEFAULT_CONFIG};
+  for(const k of [1,2,3,4]) if(state.config[k]==null) state.config[k]=DEFAULT_CONFIG[k];
+  // Migração: modelo antigo (state.meses, ano único) -> multi-ano (state.anos)
+  if(!state.anos || typeof state.anos!=="object"){
+    state.anos={};
+    if(Array.isArray(state.meses)) state.anos[START_YEAR]={meses:state.meses};
+  }
+  if(Array.isArray(state.meses)) delete state.meses;
+  if(Object.keys(state.anos).length===0) state.anos[START_YEAR]=emptyYear();
+  for(const y of Object.keys(state.anos)) normalizaAno(state.anos[y]);
+  if(!state.agenda || typeof state.agenda!=="object") state.agenda={weeks:{}};
+  if(!state.agenda.weeks || typeof state.agenda.weeks!=="object") state.agenda.weeks={};
+  seedHistorico2026();
+}
+/* Consolidado histórico do 1º semestre de 2026 (semeado uma única vez; valores em centavos) */
+function seedHistorico2026(){
+  if(state.meta.seedHist2026) return;
+  const ano=state.anos["2026"];
+  if(ano && Array.isArray(ano.meses)){
+    const hist=[
+      {pago:651500,pix:524500,din:127000,cart:0,    cTotal:41}, // Janeiro
+      {pago:800000,pix:612000,din:188000,cart:0,    cTotal:51}, // Fevereiro
+      {pago:908000,pix:776000,din:120500,cart:11500,cTotal:58}, // Março
+      {pago:894000,pix:717500,din:165000,cart:11500,cTotal:56}, // Abril
+      {pago:884000,pix:707500,din:165000,cart:11500,cTotal:58}, // Maio
+      {pago:917000,pix:768500,din:137000,cart:11500,cTotal:59}  // Junho
+    ];
+    for(let i=0;i<6;i++){
+      const mm=ano.meses[i];
+      if(mm && Array.isArray(mm.alunos) && mm.alunos.length===0 && !mm.consolidado){
+        mm.consolidado={...hist[i]};
+      }
+    }
+  }
+  state.meta.seedHist2026=true;
+}
+function normalizaAno(ano){
+  if(!ano || typeof ano!=="object") return;
+  if(!Array.isArray(ano.meses)) ano.meses=Array.from({length:12}, emptyMonth);
+  for(let i=0;i<12;i++){
+    if(!ano.meses[i]) ano.meses[i]=emptyMonth();
+    const mm=ano.meses[i];
+    if(!Array.isArray(mm.alunos)) mm.alunos=[];
+    if(!Array.isArray(mm.receitasExtras)) mm.receitasExtras=[];
+    if(!Array.isArray(mm.despesas)) mm.despesas=[];
+    if(!Array.isArray(mm.poupanca)) mm.poupanca=[];
+  }
+}
+function getAno(y){
+  if(!state.anos[y]) state.anos[y]=emptyYear();
+  normalizaAno(state.anos[y]);
+  return state.anos[y];
+}
+function curMeses(){ return getAno(curYear).meses; }
+async function persistNow(){
+  try{
+    if(storageMode==="mem") return;                 // sessão: nada a persistir
+    const json=JSON.stringify(state);
+    if(storageMode==="idb" && db){
+      await dbSet("state", state);
+      try{ localStorage.setItem("pilates_state", json); }catch(e){}  // cópia redundante de segurança
+    } else {
+      localStorage.setItem("pilates_state", json);
+    }
+  }catch(e){ console.warn("Falha ao salvar:", e); }
+}
+function setSaved(saved){
+  const el = document.getElementById("saveInd");
+  if(!el) return;
+  if(saved){ el.textContent="✓ Salvo"; el.classList.remove("dirty"); }
+  else { el.textContent="● Alterações não salvas"; el.classList.add("dirty"); }
+}
+function touch(){
+  setSaved(false);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{ await persistNow(); setSaved(true); }, 250);
+}
+
+/* ---------- Computations ---------- */
+function valorAluno(a){ return a.valor==null?0:a.valor; }
+function despesaValida(d){ return (d.descricao && d.descricao.trim()!=="") || (d.valor && d.valor>0); }
+
+function totaisMes(m){
+  let total=0,pago=0,receber=0,cPago=0,cPend=0,pix=0,din=0,cart=0,cTotal=m.alunos.length;
+  for(const a of m.alunos){
+    const v=valorAluno(a); total+=v;
+    if(a.status==="PAGO"){
+      pago+=v; cPago++;
+      if(a.formaPagamento==="PIX") pix+=v;
+      else if(a.formaPagamento==="DINHEIRO") din+=v;
+      else if(a.formaPagamento==="CARTAO") cart+=v;
+    } else { receber+=v; cPend++; }
+  }
+  // Consolidado histórico: meses sem alunos cadastrados usam os valores lançados manualmente
+  const cs=m.consolidado;
+  if(cs && m.alunos.length===0){
+    pago=cs.pago||0; pix=cs.pix||0; din=cs.din||0; cart=cs.cart||0;
+    total=pago; receber=0; cPago=cs.cTotal||0; cPend=0; cTotal=cs.cTotal||0;
+  }
+  const outras=(m.receitasExtras||[]).reduce((s,r)=>s+(r.valor||0),0);
+  let despPagas=0,despPend=0;
+  for(const d of m.despesas){
+    if(!despesaValida(d)) continue;
+    if(d.status==="PAGO") despPagas+=d.valor||0; else despPend+=d.valor||0;
+  }
+  const entradas=pago+outras;
+  const pou=movsPoupanca(m);
+  return {
+    total,pago,receber,cPago,cPend,cTotal,
+    pix,din,cart,formaSoma:pix+din+cart,
+    salarioSara:pago,outras,entradas,
+    despPagas,despPend,
+    poupDep:pou.dep,poupSaque:pou.saq,poupLiq:pou.liq,
+    saldoMes:entradas-despPagas-pou.liq
+  };
+}
+/* Movimentações de poupança do mês (líquido = depósitos - saques) */
+function movsPoupanca(m){
+  let dep=0,saq=0;
+  for(const p of (m.poupanca||[])){
+    if(!p || !(p.valor>0)) continue;
+    if(p.tipo==="SAQUE") saq+=p.valor; else dep+=p.valor;
+  }
+  return {dep,saq,liq:dep-saq};
+}
+/* Saldo acumulado da poupança até (ano, mês) — cronológico e contínuo entre anos */
+function saldoPoupancaAte(year,monthIdx){
+  let s=0;
+  const anos=Object.keys(state.anos||{}).map(Number).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
+  for(const y of anos){
+    if(y>year) continue;
+    const meses=getAno(y).meses;
+    const last=(y<year)?11:monthIdx;
+    for(let i=0;i<=last && i<12;i++) s+=movsPoupanca(meses[i]).liq;
+  }
+  return s;
+}
+function saldoAcumuladoAte(idx){ const meses=curMeses(); let s=0; for(let i=0;i<=idx;i++) s+=totaisMes(meses[i]).saldoMes; return s; }
+function totaisAno(){
+  let pago=0,pix=0,din=0,cart=0,despPagas=0;
+  const meses=curMeses();
+  for(let i=0;i<12;i++){ const t=totaisMes(meses[i]); pago+=t.pago;pix+=t.pix;din+=t.din;cart+=t.cart;despPagas+=t.despPagas; }
+  return {pago,pix,din,cart,despPagas,saldo:saldoAcumuladoAte(11)};
+}
+
+/* ---------- Aluno helpers ---------- */
+function capitalizaNome(s){ return String(s||"").replace(/\S+/g, w=> w.charAt(0).toUpperCase()+w.slice(1)); }
+function sortAlunos(m){ m.alunos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR",{sensitivity:"base"})); }
+function nomeExiste(m,nome,exceptId){ const k=nome.trim().toLowerCase(); return m.alunos.some(a=>a.id!==exceptId && a.nome.trim().toLowerCase()===k); }
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  document.querySelectorAll("#nav button[data-view], #cfgBtn").forEach(b=>b.classList.toggle("active", b.dataset.view===view));
+  refreshYearSel();
+  const app=document.getElementById("app");
+  if(view==="dashboard") app.innerHTML=renderDashboard();
+  else if(view==="alunos") { app.innerHTML=renderAlunosShell(); renderAlunosList(); }
+  else if(view==="caixa") app.innerHTML=renderCaixaMes();
+  else if(view==="fechamento") app.innerHTML=renderCaixa();
+  else if(view==="config") app.innerHTML=renderConfig();
+  else if(view==="agenda") app.innerHTML=renderAgenda();
+  window.scrollTo(0,0);
+}
+
+/* ----- Seletor de ano ----- */
+function anosDisponiveis(){
+  const cy=new Date().getFullYear();
+  const set=new Set();
+  set.add(curYear);
+  Object.keys(state.anos||{}).forEach(y=>{ const n=parseInt(y,10); if(!isNaN(n)) set.add(n); });
+  let maxData=START_YEAR;
+  set.forEach(y=>{ if(y>maxData) maxData=y; });
+  // Sempre oferece de 2026 até (ano corrente+1) e até (maior ano com dados + 1),
+  // permitindo criar o próximo ano quando quiser.
+  const teto=Math.max(cy+1, maxData+1, START_YEAR+1);
+  for(let y=START_YEAR; y<=teto; y++) set.add(y);
+  return [...set].filter(y=>y>=START_YEAR).sort((a,b)=>a-b);
+}
+function refreshYearSel(){
+  const sel=document.getElementById("yearSel"); if(!sel) return;
+  sel.innerHTML = anosDisponiveis().map(y=>`<option value="${y}" ${y===curYear?"selected":""}>${y}</option>`).join("");
+}
+
+/* ----- Dashboard ----- */
+function indHTML(lbl,val,cls){ return `<div class="ind ${cls||""}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`; }
+function renderDashboard(){
+  const t=totaisMes(curMeses()[curMonth]);
+  const ano=totaisAno();
+  const acum=saldoAcumuladoAte(curMonth);
+  let quick="";
+  for(let i=0;i<12;i++){ quick+=`<button class="pill" data-action="goto-mes" data-i="${i}">${MESES[i]}</button>`; }
+  return `
+  <div class="card">
+    <h2>Visão geral — ${MESES[curMonth]} / ${curYear}</h2>
+    <div class="grid cards">
+      ${indHTML("Total de alunos", t.cTotal, "accent")}
+      ${indHTML("Alunos pagos", t.cPago)}
+      ${indHTML("Alunos pendentes", t.cPend)}
+      ${indHTML("Total previsto", fmtCard(t.total), "accent")}
+      ${indHTML("Total recebido", fmtCard(t.pago), "pos")}
+      ${indHTML("A receber", fmtCard(t.receber), t.receber>0?"neg":"")}
+      ${indHTML("Receitas extras", fmtCard(t.outras))}
+      ${indHTML("Despesas pagas", fmtCard(t.despPagas), t.despPagas>0?"neg":"")}
+      ${indHTML("Saldo do mês", fmtCard(t.saldoMes), t.saldoMes>=0?"pos":"neg")}
+      ${indHTML("Saldo acumulado", fmtCard(acum), acum>=0?"pos":"neg")}
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">Consolidado anual</div>
+    <div class="grid cards">
+      ${indHTML("Recebido no ano", fmtCard(ano.pago), "pos")}
+      ${indHTML("PIX (ano)", fmtCard(ano.pix))}
+      ${indHTML("Dinheiro (ano)", fmtCard(ano.din))}
+      ${indHTML("Cartão (ano)", fmtCard(ano.cart))}
+      ${indHTML("Despesas pagas (ano)", fmtCard(ano.despPagas), ano.despPagas>0?"neg":"")}
+      ${indHTML("Saldo acumulado (Dez)", fmtCard(ano.saldo), ano.saldo>=0?"pos":"neg")}
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">Ir para o mês</div>
+    <div>${quick}</div>
+  </div>`;
+}
+
+/* ----- Barra de mês (compartilhada por Alunos e Caixa) ----- */
+function monthBar(){
+  let opts="";
+  for(let i=0;i<12;i++) opts+=`<option value="${i}" ${i===curMonth?"selected":""}>${MESES[i]}</option>`;
+  return `
+  <div class="month-bar">
+    <button class="nav-arrow" data-action="mes-prev" ${curMonth===0?"disabled":""}>‹</button>
+    <select data-field="mes-sel">${opts}</select>
+    <button class="nav-arrow" data-action="mes-next" ${curMonth===11?"disabled":""}>›</button>
+  </div>`;
+}
+
+/* ----- Alunos (resumo + lista + encerramento) ----- */
+function renderAlunosShell(){
+  const t=totaisMes(curMeses()[curMonth]);
+  const isDez=curMonth>=11;
+  return `
+  ${monthBar()}
+
+  <div class="card">
+    <div class="grid cards">
+      <div class="ind accent"><div class="lbl">Total do mês</div><div class="val" id="ind-total">${fmtCard(t.total)}</div></div>
+      <div class="ind pos"><div class="lbl">Já recebido</div><div class="val" id="ind-pago">${fmtCard(t.pago)}</div></div>
+      <div class="ind ${t.receber>0?"neg":""}"><div class="lbl">A receber</div><div class="val" id="ind-receber">${fmtCard(t.receber)}</div></div>
+      <div class="ind"><div class="lbl">Alunos pagos</div><div class="val" id="ind-cpago">${t.cPago}</div></div>
+      <div class="ind"><div class="lbl">Pendentes</div><div class="val" id="ind-cpend">${t.cPend}</div></div>
+      <div class="ind"><div class="lbl">Total de alunos</div><div class="val" id="ind-ctotal">${t.cTotal}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Alunos</div>
+    <div class="toolbar">
+      <div class="search"><input type="search" id="search" data-live="search" placeholder="Buscar aluno"></div>
+      <button class="btn" data-action="add-aluno">+ Adicionar aluno</button>
+    </div>
+    <div class="aluno-list" id="alunos-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Encerramento do mês</div>
+    <p class="hint" style="margin-top:0">Leva todos os alunos (nome, dias e valor) para <b>${isDez?"—":MESES[curMonth+1]}</b> como <b>PENDENTE</b> e pagamento em aberto.</p>
+    <button class="btn block" data-action="encerrar" ${isDez?"disabled":""}>
+      ${isDez?"Dezembro não tem próximo mês":"Encerrar "+MESES[curMonth]+" e migrar para "+MESES[curMonth+1]}
+    </button>
+  </div>`;
+}
+
+function poupRowHTML(p){
+  const saque = p.tipo==="SAQUE";
+  return `<div class="poup-item ${saque?"saque":"dep"}" data-id="${p.id}">
+      <span class="poup-tag">${saque?"SAQUE":"DEPÓSITO"}</span>
+      <input class="li-desc" type="text" data-live="poup-desc" data-id="${p.id}" placeholder="Descrição (opcional)" value="${esc(p.descricao||"")}">
+      <input class="li-valor" type="text" inputmode="decimal" data-live="poup-valor" data-field="poup-valor" data-id="${p.id}" placeholder="R$ 0,00" value="${p.valor?fmt(p.valor):""}">
+      <button class="icon-btn del" data-action="poup-del" data-id="${p.id}" title="Remover">🗑</button>
+    </div>`;
+}
+
+/* ----- Caixa (controle financeiro do mês: receitas + despesas) ----- */
+function renderCaixaMes(){
+  const t=totaisMes(curMeses()[curMonth]);
+  const acum=saldoAcumuladoAte(curMonth);
+  const m=curMeses()[curMonth];
+
+  // Receitas extras
+  let recRows="";
+  for(const r of m.receitasExtras){
+    recRows+=`<div class="line-item" data-id="${r.id}">
+      <input class="li-desc" type="text" data-live="rec-desc" data-id="${r.id}" placeholder="Descrição (ex.: Freelancer)" value="${esc(r.descricao)}">
+      <input class="li-valor" type="text" inputmode="decimal" data-live="rec-valor" data-field="rec-valor" data-id="${r.id}" placeholder="R$ 0,00" value="${r.valor?fmt(r.valor):""}">
+      <button class="icon-btn del" data-action="rec-del" data-id="${r.id}" title="Remover">🗑</button>
+    </div>`;
+  }
+  // Despesas
+  let despRows="";
+  for(const d of m.despesas){
+    const on = d.status==="PAGO";
+    despRows+=`<div class="line-item ${on?"pago":"pend"}" data-id="${d.id}">
+      <input class="li-desc" type="text" data-live="desp-desc" data-id="${d.id}" placeholder="Descrição da despesa" value="${esc(d.descricao)}">
+      <input class="li-valor" type="text" inputmode="decimal" data-live="desp-valor" data-field="desp-valor" data-id="${d.id}" placeholder="R$ 0,00" value="${d.valor?fmt(d.valor):""}">
+      <button class="st-toggle ${on?"pago":"pend"}" data-action="desp-status" data-id="${d.id}">${on?"PAGO":"PENDENTE"}</button>
+      <button class="icon-btn del" data-action="desp-del" data-id="${d.id}" title="Remover">🗑</button>
+    </div>`;
+  }
+  // Poupança (movimentações do mês)
+  let poupRows="";
+  for(const p of m.poupanca) poupRows+=poupRowHTML(p);
+  const poupSaldo=saldoPoupancaAte(curYear,curMonth);
+
+  return `
+  ${monthBar()}
+
+  <div class="card">
+    <div class="section-title">Controle financeiro</div>
+    <div class="grid cards" style="margin-bottom:16px">
+      <div class="ind pos"><div class="lbl">Salário Sara (alunos pagos)</div><div class="val" id="fin-sara">${fmtCard(t.salarioSara)}</div></div>
+      <div class="ind"><div class="lbl">Outras receitas</div><div class="val" id="fin-outras">${fmtCard(t.outras)}</div></div>
+      <div class="ind accent"><div class="lbl">Total de entradas</div><div class="val" id="fin-entradas">${fmtCard(t.entradas)}</div></div>
+      <div class="ind neg"><div class="lbl">Despesas pagas</div><div class="val" id="fin-desppagas">${fmtCard(t.despPagas)}</div></div>
+      <div class="ind"><div class="lbl">Despesas pendentes</div><div class="val" id="fin-desppend">${fmtCard(t.despPend)}</div></div>
+      <div class="ind ${t.saldoMes>=0?"pos":"neg"}"><div class="lbl">Saldo do mês</div><div class="val" id="fin-saldomes">${fmtCard(t.saldoMes)}</div></div>
+      <div class="ind ${acum>=0?"pos":"neg"}"><div class="lbl">Saldo acumulado</div><div class="val" id="fin-saldoacum">${fmtCard(acum)}</div></div>
+      <div class="ind poup"><div class="lbl">Saldo da poupança</div><div class="val" id="fin-poupanca">${fmtCard(poupSaldo)}</div></div>
+    </div>
+
+    <div class="section-title" style="margin-top:8px">Outras receitas</div>
+    <div id="rec-list">${recRows || '<div class="hint">Nenhuma receita extra. Ex.: Freelancer.</div>'}</div>
+    <button class="btn secondary" style="margin-top:10px" data-action="add-rec">+ Adicionar receita</button>
+
+    <div class="section-title" style="margin-top:20px">Despesas</div>
+    <div id="desp-list">${despRows || '<div class="hint">Nenhuma despesa cadastrada.</div>'}</div>
+    <button class="btn secondary" style="margin-top:10px" data-action="add-desp">+ Adicionar despesa</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Poupança</div>
+    <div class="poup-bal ${poupSaldo>=0?"pos":"neg"}">
+      <span class="lbl">Saldo atual da poupança</span>
+      <span class="val">${fmtCard(poupSaldo)}</span>
+    </div>
+    <p class="hint" style="margin-top:0">Um <b>depósito</b> tira dinheiro da conta do mês e guarda na reserva (reduz o Saldo do mês). Um <b>saque</b> devolve o dinheiro para a conta do mês. A reserva acumula ao longo dos meses e anos.</p>
+    <div id="poup-list">${poupRows || '<div class="hint">Nenhuma movimentação de poupança neste mês.</div>'}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn" data-action="add-poup-dep">➕ Depositar na poupança</button>
+      <button class="btn secondary" data-action="add-poup-saque">➖ Sacar da poupança</button>
+    </div>
+  </div>`;
+}
+
+function renderAlunosList(){
+  const cont=document.getElementById("alunos-list");
+  if(!cont) return;
+  const term=(document.getElementById("search")?.value||"").trim().toLowerCase();
+  const m=curMeses()[curMonth];
+  const base = term ? m.alunos.filter(a=>a.nome.toLowerCase().includes(term)) : m.alunos.slice();
+  const list = base.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR",{sensitivity:"base"}));
+  if(list.length===0){ cont.innerHTML='<div class="hint">'+(term?"Nenhum aluno encontrado.":"Nenhum aluno neste mês. Toque em “+ Adicionar aluno”.")+'</div>'; return; }
+  let html="";
+  for(const a of list){
+    const pago=a.status==="PAGO";
+    const cls=pago?"pago":"pend";
+    const warnForma = pago && !a.formaPagamento;
+    let diasOpts=`<option value="">—</option>`;
+    for(const d of [1,2,3,4]) diasOpts+=`<option value="${d}" ${a.diasSemana===d?"selected":""}>${d}x/semana</option>`;
+    let formaOpts="";
+    for(const [v,lab] of FORMAS) formaOpts+=`<option value="${v}" ${a.formaPagamento===v?"selected":""}>${lab}</option>`;
+    html+=`<div class="aluno ${cls}" data-id="${a.id}">
+      <input class="nome" type="text" data-field="aluno-nome" data-id="${a.id}" value="${esc(a.nome)}" aria-label="Nome do aluno" placeholder="Nome do aluno">
+      <select class="f f-dias" data-field="aluno-dias" data-id="${a.id}" aria-label="Dias por semana" title="Dias por semana">${diasOpts}</select>
+      <input class="f f-valor" type="text" inputmode="decimal" data-live="aluno-valor" data-field="aluno-valor" data-id="${a.id}" placeholder="R$ 0,00" aria-label="Valor" title="Valor" value="${a.valor!=null?fmt(a.valor):""}">
+      <select class="f f-forma ${warnForma?"warn":""}" data-field="aluno-forma" data-id="${a.id}" aria-label="Forma de pagamento" title="${warnForma?"Selecione a forma de pagamento":"Forma de pagamento"}">${formaOpts}</select>
+      <div class="actions">
+        <button class="st-switch ${pago?"pago":""}" data-action="aluno-status" data-id="${a.id}" data-status="${pago?"PENDENTE":"PAGO"}" role="switch" aria-checked="${pago?"true":"false"}" title="${pago?"Pago — toque para reabrir":"Aberto — toque para marcar como pago"}"><span class="st-track"></span><span class="st-switch-label">${pago?"PAGO":"ABERTO"}</span></button>
+        <button class="icon-btn del" data-action="aluno-del" data-id="${a.id}" title="Excluir">🗑</button>
+      </div>
+    </div>`;
+  }
+  cont.innerHTML=html;
+}
+
+/* ----- refresh só os números computados (sem re-render, preserva foco) ----- */
+function refreshComputed(){
+  if(view!=="alunos" && view!=="caixa") return;
+  const t=totaisMes(curMeses()[curMonth]);
+  const acum=saldoAcumuladoAte(curMonth);
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
+  set("ind-total",fmtCard(t.total)); set("ind-pago",fmtCard(t.pago)); set("ind-receber",fmtCard(t.receber));
+  set("ind-cpago",t.cPago); set("ind-cpend",t.cPend); set("ind-ctotal",t.cTotal);
+  set("fin-sara",fmtCard(t.salarioSara)); set("fin-outras",fmtCard(t.outras)); set("fin-entradas",fmtCard(t.entradas));
+  set("fin-desppagas",fmtCard(t.despPagas)); set("fin-desppend",fmtCard(t.despPend));
+  set("fin-saldomes",fmtCard(t.saldoMes)); set("fin-saldoacum",fmtCard(acum));
+  set("fin-poupanca",fmtCard(saldoPoupancaAte(curYear,curMonth)));
+  updatePoupBal();
+}
+
+/* ----- Caixa ----- */
+function fmtR(reais){ return "R$ " + Math.round(reais).toLocaleString("pt-BR"); }
+
+/* Gráfico de barras (SVG puro, sem dependências) */
+function svgBars(labels, values, color, fmtTick){
+  const W=760,H=260,padL=64,padR=18,padT=18,padB=40;
+  const n=labels.length, plotW=W-padL-padR, plotH=H-padT-padB;
+  const maxV=niceMax(Math.max(1,...values));
+  const step=plotW/n, bw=step*0.58;
+  let grid="",bars="",xlab="",vlab="";
+  [0,0.5,1].forEach(f=>{
+    const y=padT+plotH-plotH*f;
+    grid+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" class="c-grid"/>`;
+    grid+=`<text x="${padL-8}" y="${(y+5).toFixed(1)}" text-anchor="end" class="c-ylab">${fmtTick(maxV*f)}</text>`;
+  });
+  values.forEach((v,i)=>{
+    const h=maxV>0?(v/maxV)*plotH:0;
+    const cx=padL+step*i+step/2, x=padL+step*i+(step-bw)/2, y=padT+plotH-h;
+    bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="4" fill="${color}"><title>${labels[i]}: ${fmtTick(v)}</title></rect>`;
+    if(v>0) vlab+=`<text x="${cx.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" class="c-vlab" fill="${color}">${fmtTick(v)}</text>`;
+    xlab+=`<text x="${cx.toFixed(1)}" y="${H-padB+22}" text-anchor="middle" class="c-xlab">${labels[i]}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" preserveAspectRatio="xMidYMid meet">${grid}${bars}${vlab}${xlab}</svg>`;
+}
+
+/* Gráfico de linhas multi-série (SVG puro) */
+function svgLines(labels, series, fmtTick){
+  const W=760,H=260,padL=64,padR=18,padT=18,padB=40;
+  const n=labels.length, plotW=W-padL-padR, plotH=H-padT-padB;
+  let mx=1; series.forEach(s=>s.values.forEach(v=>{ if(v>mx) mx=v; }));
+  const maxV=niceMax(mx);
+  const xAt=i=> padL + (n<=1?plotW/2:(plotW*i/(n-1)));
+  const yAt=v=> padT+plotH-(maxV>0?(v/maxV)*plotH:0);
+  let grid="",xlab="";
+  [0,0.5,1].forEach(f=>{
+    const y=padT+plotH-plotH*f;
+    grid+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" class="c-grid"/>`;
+    grid+=`<text x="${padL-8}" y="${(y+5).toFixed(1)}" text-anchor="end" class="c-ylab">${fmtTick(maxV*f)}</text>`;
+  });
+  labels.forEach((lb,i)=> xlab+=`<text x="${xAt(i).toFixed(1)}" y="${H-padB+22}" text-anchor="middle" class="c-xlab">${lb}</text>`);
+  let paths="",dots="",vlab="";
+  series.forEach(s=>{
+    let d="";
+    s.values.forEach((v,i)=>{ d+=(i===0?"M":"L")+xAt(i).toFixed(1)+" "+yAt(v).toFixed(1)+" ";
+      dots+=`<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="3.5" fill="${s.color}"><title>${s.name} — ${labels[i]}: ${fmtTick(v)}</title></circle>`;
+      if(v>0) vlab+=`<text x="${xAt(i).toFixed(1)}" y="${(yAt(v)-7).toFixed(1)}" text-anchor="middle" class="c-vlab line" fill="${s.color}">${fmtTick(v)}</text>`; });
+    paths+=`<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" preserveAspectRatio="xMidYMid meet">${grid}${paths}${dots}${vlab}${xlab}</svg>`;
+}
+
+function renderCaixa(){
+  const meses=curMeses();
+  let rows="";
+  let tp=0,tpix=0,tdin=0,tcart=0;
+  const fatur=[],vpix=[],vdin=[],vcart=[],valunos=[];
+  const lbl=MESES.map(x=>x.slice(0,3));
+  for(let i=0;i<12;i++){
+    const t=totaisMes(meses[i]);
+    tp+=t.pago;tpix+=t.pix;tdin+=t.din;tcart+=t.cart;
+    fatur.push(t.pago/100); vpix.push(t.pix/100); vdin.push(t.din/100); vcart.push(t.cart/100); valunos.push(t.cTotal);
+    const diverge = t.pago!==t.formaSoma;
+    rows+=`<tr class="row-click" data-action="goto-mes" data-i="${i}">
+      <td>${MESES[i]}</td>
+      <td class="${diverge?"warn":""}">${fmt0(t.pago)}${diverge?" ⚠":""}</td>
+      <td>${fmt0(t.pix)}</td><td>${fmt0(t.din)}</td><td>${fmt0(t.cart)}</td>
+      <td>${t.cTotal}</td>
+    </tr>`;
+  }
+  return `
+  <div class="card">
+    <h2>Caixa ${curYear} — consolidado anual</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Mês</th><th>Total Pago</th><th>PIX</th><th>Dinheiro</th><th>Cartão</th><th>Alunos</th></tr></thead>
+        <tbody>${rows}
+          <tr class="total-row"><td>TOTAL ANUAL</td><td>${fmt0(tp)}</td><td>${fmt0(tpix)}</td><td>${fmt0(tdin)}</td><td>${fmt0(tcart)}</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">Conferência por mês: Total Pago deve ser igual a PIX + Dinheiro + Cartão. Um ⚠ indica divergência (ex.: aluno PAGO sem forma de pagamento).</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Total faturado por mês (${curYear})</div>
+    ${svgBars(lbl, fatur, "#7b4fb5", fmtR)}
+  </div>
+
+  <div class="card">
+    <div class="section-title">Formas de pagamento por mês (${curYear})</div>
+    <div class="chart-legend">
+      <span class="lg"><i style="background:#7b4fb5"></i>PIX</span>
+      <span class="lg"><i style="background:#e67e22"></i>Dinheiro</span>
+      <span class="lg"><i style="background:#2e9e5b"></i>Cartão</span>
+    </div>
+    ${svgLines(lbl, [
+      {name:"PIX",color:"#7b4fb5",values:vpix},
+      {name:"Dinheiro",color:"#e67e22",values:vdin},
+      {name:"Cartão",color:"#2e9e5b",values:vcart}
+    ], fmtR)}
+  </div>
+
+  <div class="card">
+    <div class="section-title">Alunos por mês (${curYear})</div>
+    ${svgBars(lbl, valunos, "#9b59d0", v=>String(Math.round(v)))}
+  </div>`;
+}
+
+function niceMax(v){
+  if(!isFinite(v)||v<=0) return 1;
+  const p=Math.pow(10,Math.floor(Math.log10(v))); const n=v/p;
+  let m; if(n<=1)m=1; else if(n<=2)m=2; else if(n<=2.5)m=2.5; else if(n<=5)m=5; else m=10;
+  return m*p;
+}
+
+/* ----- Config ----- */
+function renderConfig(){
+  const c=state.config;
+  let formas="";
+  for(const [v,lab] of FORMAS) if(v) formas+=`<span class="pill">${lab}</span>`;
+  return `
+  <div class="card">
+    <h2>Configurações</h2>
+    <div class="section-title">Tabela de mensalidades</div>
+    <div class="cfg-grid cfg-mens">
+      <div class="cfg-item"><label>1 dia/semana</label><input type="text" inputmode="decimal" data-field="cfg" data-dias="1" value="${fmt(c[1])}"></div>
+      <div class="cfg-item"><label>2 dias/semana</label><input type="text" inputmode="decimal" data-field="cfg" data-dias="2" value="${fmt(c[2])}"></div>
+      <div class="cfg-item"><label>3 dias/semana</label><input type="text" inputmode="decimal" data-field="cfg" data-dias="3" value="${fmt(c[3])}"></div>
+      <div class="cfg-item"><label>4 dias/semana</label><input type="text" inputmode="decimal" data-field="cfg" data-dias="4" value="${fmt(c[4])}"></div>
+    </div>
+    <p class="hint">Alterar um valor vale apenas para novos preenchimentos. Meses já registrados preservam o valor da época.</p>
+  </div>
+  <div class="card">
+    <div class="section-title">Formas de pagamento</div>
+    <div>${formas}</div>
+    <p class="hint">Fixas nesta versão.</p>
+  </div>
+  <div class="card">
+    <div class="section-title">Backup dos dados</div>
+    ${backupInfoHTML()}
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" data-action="backup-share">☁️ Guardar backup (iCloud / Arquivos)</button>
+      <button class="btn ghost" data-action="export">⬇ Exportar backup (JSON)</button>
+      <button class="btn ghost" data-action="import">⬆ Importar backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+    </div>
+    <p class="hint"><b>Guardar backup</b> abre a folha de compartilhamento do iPad: toque em <b>“Salvar em Arquivos” → iCloud Drive → pasta “Backups Gestão Sara Santos Pilates”</b>. Assim seus dados ficam guardados fora do iPad. O backup inclui configurações, todos os anos/meses, alunos, receitas e despesas. A importação substitui todos os dados atuais. Dica: guarde um backup antes de atualizar a aplicação.</p>
+  </div>
+  <div class="card">
+    <div class="section-title">Backup por texto (copiar / colar)</div>
+    <p class="hint" style="margin-top:0">Use quando o download de arquivo não funcionar (ex.: dentro do Documents/Readdle) ou para migrar os dados de um app para outro sem arquivo.</p>
+    <button class="btn" data-action="backup-text">📋 Gerar e copiar dados</button>
+    <textarea id="backupText" class="ta-backup" readonly placeholder="Toque em “Gerar e copiar dados”. O texto do backup aparece aqui — se não copiar sozinho, segure o dedo, selecione tudo e copie."></textarea>
+    <div class="section-title" style="margin-top:16px">Importar de texto</div>
+    <textarea id="importText" class="ta-backup" placeholder="Cole aqui o texto do backup e toque em “Importar deste texto”."></textarea>
+    <button class="btn ghost" data-action="import-text">⬆ Importar deste texto</button>
+    <p class="hint">Passo a passo (Documents → Safari): 1) no Documents, toque em “Gerar e copiar dados” e copie o texto; 2) abra o app no Safari; 3) cole na caixa acima e toque em “Importar deste texto”.</p>
+  </div>
+  <div class="card">
+    <div class="section-title">Salvamento</div>
+    <button class="btn secondary" data-action="save-now">Salvar agora</button>
+    <p class="hint">Os dados são salvos automaticamente a cada alteração. Este botão força o salvamento imediato.</p>
+  </div>
+  <div class="card">
+    <div class="section-title">Sobre o aplicativo</div>
+    <p class="hint" style="margin-top:0">Versão <b>${APP_VERSION}</b> — ${APP_BUILD}</p>
+    <button class="btn secondary" data-action="app-reload">🔄 Buscar atualização / Recarregar</button>
+    <p class="hint">Quando uma nova versão for publicada, você verá um aviso ao abrir o app (conectada à internet). Se quiser forçar, toque no botão acima. <b>Seus dados não são apagados</b> ao atualizar.</p>
+  </div>`;
+}
+
+/* =========================================================================
+   AGENDA (grade semanal de horários)
+   ========================================================================= */
+function logoSrc(){ const el=document.querySelector("header .head-top .title .logo"); return el?el.src:""; }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function mondayOf(date){
+  const d=new Date(date); d.setHours(0,0,0,0);
+  const wd=(d.getDay()+6)%7;                 // Segunda=0 ... Domingo=6
+  d.setDate(d.getDate()-wd);
+  return d;
+}
+function addDays(date,n){ const d=new Date(date); d.setDate(d.getDate()+n); return d; }
+function agWeekKey(mon){ return `${mon.getFullYear()}-${pad2(mon.getMonth()+1)}-${pad2(mon.getDate())}`; }
+function ensureAgWeek(){ if(!agWeekMon) agWeekMon=mondayOf(new Date()); }
+function emptyAgWeek(){ return { cells:{}, closed:{}, attend:{} }; }
+function getAgWeek(mon){
+  const key=agWeekKey(mon);
+  if(!state.agenda.weeks[key]) state.agenda.weeks[key]=emptyAgWeek();
+  const w=state.agenda.weeks[key];
+  if(!w.cells) w.cells={};
+  if(!w.closed) w.closed={};
+  if(!w.attend) w.attend={};
+  return w;
+}
+function agKey(d,t){ return d+"_"+t; }
+function agNames(w,d,t){ return w.cells[agKey(d,t)] || ["","",""]; }
+function agClosed(w,d,t){ return !!w.closed[agKey(d,t)]; }
+function agAttend(w,d,t){ return w.attend[agKey(d,t)] || ["","",""]; }
+function cycleAgAttend(d,t,line){
+  const w=getAgWeek(agWeekMon), k=agKey(d,t);
+  if(!Array.isArray(w.attend[k])) w.attend[k]=["","",""];
+  const next={"":"on","on":"off","off":""};
+  w.attend[k][line]=next[w.attend[k][line]||""];
+  touch();
+  return w.attend[k][line];
+}
+function agWeekTitle(mon){
+  const thu=addDays(mon,3);                  // quinta define o mês (ISO)
+  const month=thu.getMonth(), year=thu.getFullYear();
+  const firstMon=mondayOf(new Date(year,month,1));
+  const wnum=Math.round((mon-firstMon)/(7*86400000))+1;
+  const fri=addDays(mon,4);
+  return `${MESES[month]} - semana ${wnum} - ${pad2(mon.getDate())} a ${pad2(fri.getDate())}`;
+}
+
+function setAgendaName(d,t,line,val){
+  const w=getAgWeek(agWeekMon); const k=agKey(d,t);
+  if(!w.cells[k]) w.cells[k]=["","",""];
+  w.cells[k][line]=val; touch();
+}
+function fecharHorario(d,t){ const w=getAgWeek(agWeekMon); w.closed[agKey(d,t)]=true; touch(); render(); toast(`Horário fechado: ${AG_DAYS[d]} ${t}h.`); }
+function abrirHorarios(keys){ const w=getAgWeek(agWeekMon); keys.forEach(k=>{ delete w.closed[k]; }); touch(); render(); toast("Horário(s) reaberto(s)."); }
+
+async function agendaFecharDialog(){
+  const dopts=AG_DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join("");
+  const topts=AG_TIMES.map(t=>`<option value="${t}">${t}h</option>`).join("");
+  const html=`<h3>Fechar horário</h3>
+    <p>Selecione o dia e o horário. A célula ficará bloqueada (sem inserir nomes).</p>
+    <label class="mlbl">Dia da semana</label><select id="fdia">${dopts}</select>
+    <label class="mlbl">Horário</label><select id="fhora">${topts}</select>
+    <div class="modal-actions"><button class="btn ghost" data-mres="null">Cancelar</button><button class="btn" data-mres="ok">Fechar horário</button></div>`;
+  const r=await modalForm(html);
+  if(r.res==="ok"){ fecharHorario(parseInt(r.form.fdia,10), r.form.fhora); }
+}
+async function agendaAbrirDialog(){
+  const w=getAgWeek(agWeekMon);
+  const keys=Object.keys(w.closed).filter(k=>w.closed[k]);
+  if(!keys.length){
+    await modal(`<h3>Abrir horário</h3><p>Não há horários fechados nesta semana.</p>
+      <div class="modal-actions"><button class="btn" data-mres="ok">Ok</button></div>`);
+    return;
+  }
+  keys.sort();
+  const rows=keys.map(k=>{ const [d,t]=k.split("_"); return `<label class="ag-openrow"><input type="checkbox" data-openkey="${k}"> ${AG_DAYS[+d]} — ${t}h</label>`; }).join("");
+  const sel=await modalOpenSlots(`<h3>Abrir horário</h3><p>Selecione os horários fechados que deseja reabrir.</p>
+    <div class="ag-openlist">${rows}</div>
+    <div class="modal-actions"><button class="btn ghost" data-mres="null">Cancelar</button><button class="btn" data-mres="ok">Abrir selecionados</button></div>`);
+  if(sel && sel.length){ abrirHorarios(sel); }
+}
+function modalOpenSlots(html){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div"); ov.className="overlay"; ov.innerHTML=`<div class="modal modal-wide">${html}</div>`;
+    document.body.appendChild(ov);
+    const finish=ok=>{
+      let out=null;
+      if(ok){ out=[...ov.querySelectorAll("input[data-openkey]:checked")].map(i=>i.dataset.openkey); }
+      ov.remove(); resolve(out);
+    };
+    ov.addEventListener("click",e=>{ if(e.target===ov) finish(false); });
+    ov.querySelectorAll("[data-mres]").forEach(b=>b.addEventListener("click",()=>finish(b.dataset.mres==="ok")));
+  });
+}
+async function agendaMigrar(){
+  const w=getAgWeek(agWeekMon);
+  const prox=addDays(agWeekMon,7);
+  const nk=agWeekKey(prox);
+  const dest=state.agenda.weeks[nk];
+  const destComDados = dest && (
+    Object.values(dest.cells||{}).some(a=>a.some(x=>x&&x.trim())) ||
+    Object.keys(dest.closed||{}).length>0
+  );
+  if(destComDados){
+    if(!await confirmDialog("A próxima semana já possui dados. Deseja substituí-los pelos nomes desta semana?")) return;
+  }
+  state.agenda.weeks[nk]=JSON.parse(JSON.stringify({cells:w.cells, closed:w.closed}));
+  agWeekMon=prox; touch(); render();
+  toast("Nomes levados para a próxima semana.");
+}
+
+function renderAgenda(){
+  ensureAgWeek();
+  const w=getAgWeek(agWeekMon);
+  const title=agWeekTitle(agWeekMon);
+  const logo=logoSrc();
+  let head=`<tr><th class="ag-corner"><div class="ag-corner-in"><img src="${logo}" alt=""><div class="ag-brand"><span>Sara</span><span>Santos</span></div></div></th>`;
+  for(let d=0; d<AG_DAYS.length; d++){ const dd=String(addDays(agWeekMon,d).getDate()).padStart(2,"0"); head+=`<th class="ag-day" data-day="${d}">${AG_DAYS[d].toUpperCase()}-${dd}</th>`; }
+  head+=`</tr>`;
+  let body="";
+  for(const t of AG_TIMES){
+    body+=`<tr><th class="ag-time" data-time="${t}">${t}h</th>`;
+    for(let d=0; d<AG_DAYS.length; d++){
+      if(agClosed(w,d,t)){
+        body+=`<td class="ag-cell closed" data-day="${d}" data-time="${t}"><div class="ag-closed-tag">🔒 FECHADO</div></td>`;
+      } else {
+        const nm=agNames(w,d,t);
+        const at=agAttend(w,d,t);
+        let lines="";
+        for(let l=0;l<3;l++){
+          const st=at[l]||"";
+          const lineCls=st==="on"?" att-on":st==="off"?" att-off":"";
+          const btnCls=st==="on"?"on":st==="off"?"off":"";
+          lines+=`<div class="ag-line${lineCls}"><button class="ag-att ${btnCls}" data-action="agenda-att" data-day="${d}" data-time="${t}" data-line="${l}" title="Presença: neutro → veio → faltou" aria-label="Presença do aluno"></button><input class="ag-name" type="text" data-live="agenda-cell" data-day="${d}" data-time="${t}" data-line="${l}" value="${esc(nm[l]||"")}"></div>`;
+        }
+        body+=`<td class="ag-cell" data-day="${d}" data-time="${t}">${lines}</td>`;
+      }
+    }
+    body+=`</tr>`;
+  }
+  return `
+  <div class="card">
+    <div class="ag-topbar">
+      <button class="nav-arrow" data-action="sem-prev" title="Semana anterior">‹</button>
+      <div class="ag-title">${title}</div>
+      <button class="nav-arrow" data-action="sem-next" title="Próxima semana">›</button>
+    </div>
+    <div class="ag-actions">
+      <button class="btn secondary" data-action="agenda-fechar">🔒 Fechar horário</button>
+      <button class="btn ghost" data-action="agenda-abrir">🔓 Abrir horário</button>
+      <button class="btn" data-action="agenda-migrar">➡ Levar nomes p/ próxima semana</button>
+    </div>
+    <div class="ag-table-wrap">
+      <table class="ag-table"><thead>${head}</thead><tbody>${body}</tbody></table>
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   MODALS / TOAST
+   ========================================================================= */
+function toast(msg){
+  const c=document.getElementById("toasts");
+  const el=document.createElement("div"); el.className="toast"; el.textContent=msg;
+  c.appendChild(el);
+  setTimeout(()=>{ el.style.transition="opacity .3s"; el.style.opacity="0"; setTimeout(()=>el.remove(),300); }, 1900);
+}
+function modal(html){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div"); ov.className="overlay"; ov.innerHTML=`<div class="modal">${html}</div>`;
+    document.body.appendChild(ov);
+    ov._resolve=v=>{ ov.remove(); resolve(v); };
+    ov.addEventListener("click",e=>{ if(e.target===ov) ov._resolve(null); });
+    ov.querySelectorAll("[data-mres]").forEach(b=>b.addEventListener("click",()=>{
+      const v=b.dataset.mres;
+      if(v==="__input__"){ const inp=ov.querySelector("input"); ov._resolve(inp?inp.value:null); }
+      else ov._resolve(v==="null"?null:v);
+    }));
+    const inp=ov.querySelector("input"); if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ ov._resolve(inp.value);} }); }
+  });
+}
+function modalForm(html){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div"); ov.className="overlay"; ov.innerHTML=`<div class="modal">${html}</div>`;
+    document.body.appendChild(ov);
+    const done=v=>{
+      const form={}; ov.querySelectorAll("select[id],input[id]").forEach(el=>{ form[el.id]=el.value; });
+      ov.remove(); resolve({res:v, form});
+    };
+    ov.addEventListener("click",e=>{ if(e.target===ov) done(null); });
+    ov.querySelectorAll("[data-mres]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.mres==="null"?null:b.dataset.mres)));
+  });
+}
+function confirmDialog(msg){
+  return modal(`<h3>Confirmar</h3><p>${esc(msg)}</p>
+    <div class="modal-actions"><button class="btn ghost" data-mres="null">Cancelar</button><button class="btn" data-mres="ok">Confirmar</button></div>`)
+    .then(v=>v==="ok");
+}
+function promptDialog(msg,val){
+  return modal(`<h3>${esc(msg)}</h3><input type="text" value="${esc(val||"")}" placeholder="Digite aqui">
+    <div class="modal-actions"><button class="btn ghost" data-mres="null">Cancelar</button><button class="btn" data-mres="__input__">Salvar</button></div>`);
+}
+
+/* =========================================================================
+   ACTIONS
+   ========================================================================= */
+function m(){ return curMeses()[curMonth]; }
+
+async function addAluno(){
+  const nome=await promptDialog("Nome do aluno:");
+  if(nome==null) return;
+  const t=capitalizaNome(nome.trim());
+  if(t===""){ toast("Informe um nome."); return; }
+  if(nomeExiste(m(),t,null)){ toast("Já existe um aluno com esse nome neste mês."); return; }
+  m().alunos.push({id:uid(),nome:t,diasSemana:null,valor:null,formaPagamento:"",status:"PENDENTE",valorManual:false});
+  sortAlunos(m()); touch(); toast("Aluno adicionado.");
+  renderMonthRefresh();
+}
+async function delAluno(id){
+  const a=m().alunos.find(x=>x.id===id); if(!a) return;
+  if(!await confirmDialog(`Deseja realmente excluir "${a.nome}"? Esta ação não poderá ser desfeita.`)) return;
+  m().alunos=m().alunos.filter(x=>x.id!==id); touch(); toast("Aluno removido.");
+  renderMonthRefresh();
+}
+async function setAlunoStatus(id,status){
+  const a=m().alunos.find(x=>x.id===id); if(!a) return;
+  if(a.status===status) return;   // já está nesse estado — evita toque acidental
+  const nome=(a.nome||"").trim()||"este aluno";
+  const msg = status==="PAGO"
+    ? `Confirmar PAGAMENTO de ${nome}?`
+    : `Reabrir o pagamento de ${nome} (deixar em ABERTO)?`;
+  if(!await confirmDialog(msg)) return;
+  a.status=status;
+  if(status==="PAGO" && !a.formaPagamento) toast("Selecione a forma de pagamento.");
+  touch(); renderMonthRefresh();
+}
+function setAlunoDias(id,val){
+  const a=m().alunos.find(x=>x.id===id); if(!a) return;
+  if(val===""){ a.diasSemana=null; a.valor=null; a.valorManual=false; }
+  else { const n=parseInt(val,10); a.diasSemana=n; a.valor=state.config[n]; a.valorManual=false; }
+  touch(); renderMonthRefresh();
+}
+function setAlunoForma(id,val){ const a=m().alunos.find(x=>x.id===id); if(!a) return; a.formaPagamento=val; touch(); renderMonthRefresh(); }
+function setAlunoValorLive(id,val){
+  const a=m().alunos.find(x=>x.id===id); if(!a) return;
+  const c=parseCents(val);
+  if(c!=null && c<0){ return; }
+  a.valor = c; a.valorManual=true; touch(); refreshComputed();
+}
+function commitAlunoNome(id,val){
+  const a=m().alunos.find(x=>x.id===id); if(!a) return;
+  const t=capitalizaNome((val||"").trim());
+  if(t===""){ toast("O nome não pode ficar vazio."); renderAlunosList(); return; }
+  if(nomeExiste(m(),t,id)){ toast("Já existe um aluno com esse nome neste mês."); renderAlunosList(); return; }
+  a.nome=t; sortAlunos(m()); touch(); renderAlunosList();
+}
+
+async function encerrarMes(){
+  if(curMonth>=11){ toast("Dezembro não tem próximo mês nesta versão."); return; }
+  const dest=curMonth+1;
+  const src=m();
+  if(src.alunos.length===0){ toast("Não há alunos para migrar."); return; }
+  if(!await confirmDialog(`Encerrar ${MESES[curMonth]} e migrar ${src.alunos.length} aluno(s) para ${MESES[dest]}? Todos entrarão como PENDENTE, pagamento em aberto.`)) return;
+  const meses=curMeses();
+  if(meses[dest].alunos.length>0){
+    if(!await confirmDialog(`O mês ${MESES[dest]} já tem ${meses[dest].alunos.length} aluno(s). Eles serão SUBSTITUÍDOS pelos alunos de ${MESES[curMonth]}. Continuar?`)) return;
+  }
+  meses[dest].alunos = src.alunos.map(a=>({
+    id:uid(), nome:a.nome, diasSemana:a.diasSemana, valor:a.valor,
+    formaPagamento:"", status:"PENDENTE", valorManual:!!a.valorManual
+  }));
+  sortAlunos(meses[dest]);
+  touch(); toast(`Migrado para ${MESES[dest]}.`);
+  curMonth=dest; view="alunos"; render();
+}
+
+/* Despesas */
+function addDespesa(){ m().despesas.push({id:uid(),descricao:"",valor:0,status:"PENDENTE"}); touch(); renderMonthRefresh(); toast("Despesa adicionada."); }
+function delDespesa(id){ m().despesas=m().despesas.filter(d=>d.id!==id); touch(); renderMonthRefresh(); }
+function toggleDespesa(id){ const d=m().despesas.find(x=>x.id===id); if(!d) return; d.status=d.status==="PAGO"?"PENDENTE":"PAGO"; touch(); renderMonthRefresh(); }
+function setDespDescLive(id,val){ const d=m().despesas.find(x=>x.id===id); if(!d) return; d.descricao=val; touch(); refreshComputed(); }
+function setDespValorLive(id,val){ const d=m().despesas.find(x=>x.id===id); if(!d) return; const c=parseCents(val); if(c!=null&&c<0) return; d.valor=c||0; touch(); refreshComputed(); }
+
+/* Receitas extras */
+function addReceita(){ m().receitasExtras.push({id:uid(),descricao:"",valor:0}); touch(); renderMonthRefresh(); toast("Receita adicionada."); }
+function delReceita(id){ m().receitasExtras=m().receitasExtras.filter(r=>r.id!==id); touch(); renderMonthRefresh(); }
+function setRecDescLive(id,val){ const r=m().receitasExtras.find(x=>x.id===id); if(!r) return; r.descricao=val; touch(); refreshComputed(); }
+function setRecValorLive(id,val){ const r=m().receitasExtras.find(x=>x.id===id); if(!r) return; const c=parseCents(val); if(c!=null&&c<0) return; r.valor=c||0; touch(); refreshComputed(); }
+
+/* Poupança */
+function addPoupanca(tipo){
+  const p={id:uid(),tipo:(tipo==="SAQUE"?"SAQUE":"DEP"),descricao:"",valor:0};
+  m().poupanca.push(p); touch();
+  const list=document.getElementById("poup-list");
+  if(list){
+    if(list.querySelector(".hint")) list.innerHTML="";
+    list.insertAdjacentHTML("beforeend", poupRowHTML(p));
+    const row=list.querySelector('.poup-item[data-id="'+p.id+'"]');
+    if(row){
+      const inp=row.querySelector(".li-valor");
+      row.scrollIntoView({block:"center",behavior:"smooth"});
+      if(inp) inp.focus();
+    }
+    refreshComputed();
+  } else {
+    renderMonthRefresh();
+  }
+  toast(tipo==="SAQUE"?"Saque adicionado.":"Depósito adicionado.");
+}
+function delPoupanca(id){
+  m().poupanca=m().poupanca.filter(p=>p.id!==id); touch();
+  const list=document.getElementById("poup-list");
+  const row=list && list.querySelector('.poup-item[data-id="'+id+'"]');
+  if(list && row){
+    row.remove();
+    if(!list.querySelector(".poup-item")) list.innerHTML='<div class="hint">Nenhuma movimentação de poupança neste mês.</div>';
+    refreshComputed();
+  } else {
+    renderMonthRefresh();
+  }
+}
+function setPoupDescLive(id,val){ const p=m().poupanca.find(x=>x.id===id); if(!p) return; p.descricao=val; touch(); }
+function setPoupValorLive(id,val){ const p=m().poupanca.find(x=>x.id===id); if(!p) return; const c=parseCents(val); if(c!=null&&c<0) return; p.valor=c||0; touch(); refreshComputed(); }
+/* reformata o valor no próprio campo, sem re-render (preserva a rolagem) */
+function reformatPoupValor(id){
+  const p=m().poupanca.find(x=>x.id===id); if(!p) return;
+  const inp=document.querySelector('.poup-item[data-id="'+id+'"] .li-valor');
+  if(inp) inp.value = p.valor?fmt(p.valor):"";
+  refreshComputed();
+}
+/* atualiza o destaque de saldo da poupança (rodapé) em tempo real */
+function updatePoupBal(){
+  const bal=document.querySelector(".poup-bal"); if(!bal) return;
+  const s=saldoPoupancaAte(curYear,curMonth);
+  const v=bal.querySelector(".val"); if(v) v.innerHTML=fmtCard(s);
+  bal.classList.toggle("neg", s<0); bal.classList.toggle("pos", s>=0);
+}
+
+/* Config */
+function setConfig(dias,val){ const c=parseCents(val); if(c==null||c<0){ toast("Valor inválido."); render(); return; } state.config[dias]=c; touch(); }
+
+/* Backup — helpers de lembrete */
+function temDados(){
+  const anos=(state.anos)?Object.values(state.anos):[];
+  for(const ano of anos){
+    for(const m of ((ano&&ano.meses)||[])){
+      if((m.alunos&&m.alunos.length)||(m.receitasExtras&&m.receitasExtras.length)||(m.despesas&&m.despesas.length)) return true;
+    }
+  }
+  return false;
+}
+function diasDesde(iso){
+  if(!iso) return Infinity;
+  const t=Date.parse(iso); if(isNaN(t)) return Infinity;
+  return Math.floor((Date.now()-t)/86400000);
+}
+function fmtDataHora(iso){
+  if(!iso) return null;
+  const d=new Date(iso); if(isNaN(d.getTime())) return null;
+  return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function backupInfoHTML(){
+  const last=state.meta&&state.meta.lastBackup;
+  const dias=diasDesde(last);
+  const quando=fmtDataHora(last);
+  if(!last){
+    return `<div class="reminder warn">🔔 <b>Você ainda não guardou nenhum backup.</b> Toque em <b>Guardar backup</b> e salve na sua pasta do iCloud (“Backups Gestão Sara Santos Pilates”).</div>`;
+  }
+  if(backupFeitoHoje()){
+    return `<div class="reminder ok">✓ Backup de hoje guardado: <b>${quando}</b>. Tudo em dia!</div>`;
+  }
+  if(dias>=1){
+    return `<div class="reminder warn">🔔 <b>Você não faz backup há ${dias} dia(s)</b> (último: ${quando}). Toque em <b>Guardar backup</b> e salve no iCloud.</div>`;
+  }
+  return `<div class="reminder ok">✓ Último backup: <b>${quando}</b>. Mantenha o hábito de guardar periodicamente.</div>`;
+}
+function avisaAtualizacao(){
+  try{
+    const prev = localStorage.getItem("ssp_app_version");
+    if(prev && prev!==APP_VERSION){
+      setTimeout(()=>toast("Aplicativo atualizado para a versão "+APP_VERSION+" ✨"), 900);
+    }
+    localStorage.setItem("ssp_app_version", APP_VERSION);
+  }catch(e){ /* sem localStorage neste modo: ignora */ }
+}
+function hojeStr(){ const n=new Date(); return `${n.getFullYear()}-${pad2(n.getMonth()+1)}-${pad2(n.getDate())}`; }
+function backupFeitoHoje(){
+  const last=state.meta&&state.meta.lastBackup; if(!last) return false;
+  const d=new Date(last); if(isNaN(d.getTime())) return false;
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`===hojeStr();
+}
+let lembreteBackupSessao=false;   // no máximo um lembrete por sessão
+/* Lembrete diário às 18h (com o app aberto): pede para tocar em "Guardar backup".
+   Antes das 18h só lembra se já estiver 2+ dias sem backup. Nunca faz download automático. */
+function checkLembreteBackup(force){
+  try{
+    if(!state||!state.meta) return;
+    if(!temDados()) return;
+    if(backupFeitoHoje()) return;                        // já guardou backup hoje
+    if(lembreteBackupSessao) return;                     // evita spam na mesma sessão
+    const dias=diasDesde(state.meta.lastBackup);
+    const now=new Date();
+    const atrasado=(dias===Infinity)||(dias>=2);
+    if(!force && now.getHours()<18 && !atrasado) return; // regra das 18h (ou já muito atrasado)
+    // no máximo um lembrete por dia, mesmo reabrindo o app:
+    try{ if(localStorage.getItem("ssp_lembrete_dia")===hojeStr()) return; }catch(e){}
+    lembreteBackupSessao=true;
+    try{ localStorage.setItem("ssp_lembrete_dia", hojeStr()); }catch(e){}
+    const msg=(dias===Infinity)
+      ? "Está na hora do backup diário (após as 18h) e você ainda não guardou nenhum backup. Guardar agora no iCloud?"
+      : (dias>=1
+          ? `Está na hora do backup diário. Você não faz backup há ${dias} dia(s). Guardar agora no iCloud?`
+          : "Lembrete das 18h: guardar o backup de hoje no iCloud agora?");
+    // Após as 18h, dispara o backup automaticamente: o iOS exige um toque para abrir
+    // "Salvar em Arquivos", então confirmamos e abrimos a folha de compartilhamento.
+    setTimeout(async ()=>{
+      try{
+        const ok=await confirmDialog(msg);
+        if(ok) await guardarBackupShare();
+      }catch(e){ console.warn("Auto-backup 18h falhou:", e); }
+    }, 900);
+  }catch(e){ console.warn("Lembrete de backup falhou:", e); }
+}
+
+/* Backup */
+function exportBackup(auto){
+  const suffix = auto ? "-auto" : "";
+  const data=JSON.stringify({app:"pilates-manager",version:1,exportedAt:new Date().toISOString(),state},null,2);
+  const blob=new Blob([data],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=fmtBackupName();
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  if(!state.meta) state.meta={};
+  state.meta.lastBackup=new Date().toISOString();
+  touch();
+  toast(auto ? "Backup automático das 18h gerado." : "Backup exportado.");
+  if(view==="config") render();
+}
+/* Guardar backup FORA do iPad via folha de compartilhamento do iOS (iCloud/Arquivos).
+   Ordem: 1) Web Share com ARQUIVO (ideal); 2) Web Share só com TEXTO; 3) fallback texto/local. */
+function backupPayload(){
+  return JSON.stringify({app:"pilates-manager",version:1,exportedAt:new Date().toISOString(),state},null,2);
+}
+/* Nome do arquivo com a data no INÍCIO (AAAA.MM.DD) — assim a lista fica em ordem
+   alfabética = ordem cronológica dentro da pasta do iCloud. */
+function fmtBackupName(){
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"."+p(d.getMonth()+1)+"."+p(d.getDate())+"-backup-pilates.json";
+}
+function marcaBackupFeito(){
+  if(!state.meta) state.meta={};
+  state.meta.lastBackup=new Date().toISOString();
+  lembreteBackupSessao=true;                 // não lembra de novo nesta sessão
+  try{ localStorage.setItem("ssp_lembrete_dia", hojeStr()); }catch(e){}
+  touch();
+  if(view==="config") render();
+}
+async function guardarBackupShare(){
+  const data=backupPayload();
+  const fname=fmtBackupName();
+  // 1) Web Share API com ARQUIVO — abre a folha → "Salvar em Arquivos" → iCloud Drive
+  try{
+    if(navigator.share && navigator.canShare){
+      const file=new File([data], fname, {type:"application/json"});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:"Backup Sara Santos Pilates"});
+        marcaBackupFeito();
+        toast("Backup pronto — escolha “Salvar em Arquivos” → iCloud Drive.");
+        return;
+      }
+    }
+  }catch(err){
+    if(err && err.name==="AbortError"){ toast("Compartilhamento cancelado."); return; }
+    console.warn("Share com arquivo indisponível:", err);
+  }
+  // 2) Web Share API só com TEXTO (quando arquivos não são suportados)
+  try{
+    if(navigator.share){
+      await navigator.share({title:"Backup Sara Santos Pilates", text:data});
+      marcaBackupFeito();
+      toast("Backup compartilhado como texto.");
+      return;
+    }
+  }catch(err){
+    if(err && err.name==="AbortError"){ toast("Compartilhamento cancelado."); return; }
+    console.warn("Share com texto indisponível:", err);
+  }
+  // 3) Fallback final: reutiliza o backup por texto já existente (copiar/colar) — nunca quebra
+  backupComoTexto();
+  toast("Compartilhamento indisponível neste navegador — backup gerado abaixo para copiar.");
+  if(view==="config") render();
+}
+async function importFromString(text){
+  try{
+    const parsed=JSON.parse(text);
+    const newState=parsed.state?parsed.state:parsed;
+    // aceita tanto o formato novo (anos) quanto o antigo (meses)
+    const valido = newState && typeof newState==="object" && (("anos" in newState) || ("meses" in newState) || ("config" in newState));
+    if(!valido) throw new Error("Formato inválido");
+    if(!await confirmDialog("A importação substituirá os dados atuais. Deseja continuar?")) return false;
+    state=newState; ensureShape(); await persistNow(); setSaved(true);
+    toast("Backup restaurado."); render();
+    return true;
+  }catch(err){ toast("Backup inválido: verifique se o texto foi copiado por completo."); return false; }
+}
+function importBackup(){
+  const inp=document.getElementById("importFile"); if(!inp) return;
+  inp.value="";
+  inp.onchange=async ()=>{
+    const file=inp.files&&inp.files[0]; if(!file) return;
+    const text=await file.text();
+    await importFromString(text);
+  };
+  inp.click();
+}
+/* ---- Migração por texto (para navegadores que bloqueiam download, ex.: Documents/Readdle) ---- */
+function backupComoTexto(){
+  const data=JSON.stringify({app:"pilates-manager",version:1,exportedAt:new Date().toISOString(),state},null,2);
+  const ta=document.getElementById("backupText");
+  if(ta){ ta.value=data; ta.focus(); ta.select(); }
+  let copiado=false;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(data); copiado=true; }
+    else if(document.execCommand){ copiado=document.execCommand("copy"); }
+  }catch(e){ /* fallback manual abaixo */ }
+  if(!state.meta) state.meta={};
+  state.meta.lastBackup=new Date().toISOString(); touch();
+  toast(copiado ? "Backup copiado! Cole no destino." : "Backup gerado. Selecione tudo e copie manualmente.");
+}
+async function importarDeTexto(){
+  const ta=document.getElementById("importText");
+  const txt=(ta && ta.value||"").trim();
+  if(!txt){ toast("Cole o texto do backup na caixa antes de importar."); return; }
+  await importFromString(txt);
+}
+
+/* re-render do mês preservando o termo de busca (aba Alunos) */
+function renderMonthRefresh(){
+  if(view==="caixa"){ render(); return; }
+  if(view!=="alunos"){ render(); return; }
+  const term=document.getElementById("search")?.value||"";
+  const app=document.getElementById("app");
+  app.innerHTML=renderAlunosShell();
+  const s=document.getElementById("search"); if(s) s.value=term;
+  renderAlunosList();
+}
+
+/* =========================================================================
+   EVENT DELEGATION
+   ========================================================================= */
+function bindEvents(){
+  const app=document.getElementById("app");
+
+  document.getElementById("nav").addEventListener("click",e=>{
+    const b=e.target.closest("button[data-view]"); if(!b) return;
+    view=b.dataset.view;
+    if(view==="agenda") agWeekMon=mondayOf(new Date());   // sempre abre na semana atual
+    render();
+  });
+
+  const ys=document.getElementById("yearSel");
+  if(ys) ys.addEventListener("change",e=>{ curYear=parseInt(e.target.value,10); getAno(curYear); touch(); render(); });
+
+  const cfgBtn=document.getElementById("cfgBtn");
+  if(cfgBtn) cfgBtn.addEventListener("click",()=>{ view="config"; render(); });
+
+  app.addEventListener("click",async e=>{
+    const el=e.target.closest("[data-action]"); if(!el) return;
+    const act=el.dataset.action, id=el.dataset.id;
+    switch(act){
+      case "goto-mes": curMonth=parseInt(el.dataset.i,10); view="alunos"; render(); break;
+      case "mes-prev": if(curMonth>0){curMonth--; render();} break;
+      case "mes-next": if(curMonth<11){curMonth++; render();} break;
+      case "add-aluno": addAluno(); break;
+      case "aluno-del": delAluno(id); break;
+      case "aluno-status": setAlunoStatus(id, el.dataset.status); break;
+      case "add-desp": addDespesa(); break;
+      case "desp-del": delDespesa(id); break;
+      case "desp-status": toggleDespesa(id); break;
+      case "add-rec": addReceita(); break;
+      case "rec-del": delReceita(id); break;
+      case "add-poup-dep": addPoupanca("DEP"); break;
+      case "add-poup-saque": addPoupanca("SAQUE"); break;
+      case "poup-del": delPoupanca(id); break;
+      case "encerrar": encerrarMes(); break;
+      case "backup-share": await guardarBackupShare(); break;
+      case "export": exportBackup(); break;
+      case "import": importBackup(); break;
+      case "save-now": await persistNow(); setSaved(true); toast("Dados salvos."); break;
+      case "app-reload": location.reload(); break;
+      case "backup-text": backupComoTexto(); break;
+      case "import-text": await importarDeTexto(); break;
+      case "sem-prev": agWeekMon=addDays(agWeekMon,-7); render(); break;
+      case "sem-next": agWeekMon=addDays(agWeekMon,7); render(); break;
+      case "agenda-fechar": agendaFecharDialog(); break;
+      case "agenda-abrir": agendaAbrirDialog(); break;
+      case "agenda-migrar": agendaMigrar(); break;
+      case "agenda-att": {
+        const st=cycleAgAttend(+el.dataset.day, el.dataset.time, +el.dataset.line);
+        el.classList.toggle("on", st==="on"); el.classList.toggle("off", st==="off");
+        const line=el.closest(".ag-line");
+        if(line){ line.classList.toggle("att-on", st==="on"); line.classList.toggle("att-off", st==="off"); }
+        break;
+      }
+    }
+  });
+
+  app.addEventListener("change",e=>{
+    const el=e.target.closest("[data-field]"); if(!el) return;
+    const f=el.dataset.field, id=el.dataset.id;
+    if(f==="mes-sel"){ curMonth=parseInt(el.value,10); render(); }
+    else if(f==="aluno-nome"){ commitAlunoNome(id, el.value); }
+    else if(f==="aluno-dias"){ setAlunoDias(id, el.value); }
+    else if(f==="aluno-valor"){ renderMonthRefresh(); }        // reformat
+    else if(f==="aluno-forma"){ setAlunoForma(id, el.value); }
+    else if(f==="desp-valor"){ renderMonthRefresh(); }
+    else if(f==="rec-valor"){ renderMonthRefresh(); }
+    else if(f==="poup-valor"){ reformatPoupValor(id); }
+    else if(f==="cfg"){ setConfig(parseInt(el.dataset.dias,10), el.value); }
+  });
+
+  app.addEventListener("input",e=>{
+    const el=e.target.closest("[data-live]"); if(!el) return;
+    const k=el.dataset.live, id=el.dataset.id;
+    if(k==="search"){ renderAlunosList(); }
+    else if(k==="aluno-valor"){ setAlunoValorLive(id, el.value); }
+    else if(k==="desp-desc"){ setDespDescLive(id, el.value); }
+    else if(k==="desp-valor"){ setDespValorLive(id, el.value); }
+    else if(k==="rec-desc"){ setRecDescLive(id, el.value); }
+    else if(k==="rec-valor"){ setRecValorLive(id, el.value); }
+    else if(k==="poup-desc"){ setPoupDescLive(id, el.value); }
+    else if(k==="poup-valor"){ setPoupValorLive(id, el.value); }
+    else if(k==="agenda-cell"){ setAgendaName(parseInt(el.dataset.day,10), el.dataset.time, parseInt(el.dataset.line,10), el.value); }
+  });
+
+  // Destaque cruzado (linha + coluna) da Agenda ao focar uma célula
+  app.addEventListener("focusin",e=>{
+    const tbl=document.querySelector(".ag-table"); if(!tbl) return;
+    tbl.querySelectorAll(".ag-hl-col,.ag-hl-row,.ag-hl-head,.ag-hl-line").forEach(el=>el.classList.remove("ag-hl-col","ag-hl-row","ag-hl-head","ag-hl-line"));
+    const inp=e.target.closest(".ag-name"); if(!inp) return;
+    const d=inp.dataset.day, t=inp.dataset.time;
+    tbl.querySelectorAll('[data-day="'+d+'"]').forEach(el=>el.classList.add("ag-hl-col"));
+    tbl.querySelectorAll('[data-time="'+t+'"]').forEach(el=>el.classList.add("ag-hl-row"));
+    const dh=tbl.querySelector('th.ag-day[data-day="'+d+'"]'); if(dh) dh.classList.add("ag-hl-head");
+    const th=tbl.querySelector('th.ag-time[data-time="'+t+'"]'); if(th) th.classList.add("ag-hl-head");
+    const line=inp.closest(".ag-line"); if(line) line.classList.add("ag-hl-line");
+  });
+  app.addEventListener("focusout",e=>{
+    const tbl=document.querySelector(".ag-table"); if(!tbl) return;
+    const to=e.relatedTarget;
+    if(to && tbl.contains(to)) return;   // ainda dentro da tabela
+    tbl.querySelectorAll(".ag-hl-col,.ag-hl-row,.ag-hl-head,.ag-hl-line").forEach(el=>el.classList.remove("ag-hl-col","ag-hl-row","ag-hl-head","ag-hl-line"));
+  });
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+(async function boot(){
+  // 1) UI SEMPRE aparece primeiro (dados default em memória) — nunca fica em branco,
+  //    mesmo que o armazenamento local demore ou falhe (ex.: pré-visualização do iPad).
+  initState();
+  bindEvents();
+  render();
+  setSaved(true);
+  avisaAtualizacao();                         // avisa se a versão publicada mudou desde a última abertura
+  setInterval(checkLembreteBackup, 5*60*1000);   // verifica o lembrete de backup das 18h a cada 5 min
+
+  // 2) Tenta IndexedDB com timeout (não trava a tela). Se abrir, carrega os dados salvos.
+  try{
+    db = await withTimeout(openDB(), 2000);
+    storageMode = "idb";
+    const s = await withTimeout(dbGet("state"), 2000);
+    if(s){ state = s; ensureShape(); render(); }
+    else { await persistNow(); }
+    checkLembreteBackup();
+    return;
+  }catch(err){ db = null; console.warn("IndexedDB indisponível:", err); }
+
+  // 3) Fallback: localStorage (funciona em mais contextos que o IndexedDB).
+  try{
+    localStorage.setItem("__pilates_probe", "1"); localStorage.removeItem("__pilates_probe");
+    storageMode = "ls";
+    const raw = localStorage.getItem("pilates_state");
+    if(raw){ state = JSON.parse(raw); ensureShape(); render(); }
+    else { persistNow(); }
+    checkLembreteBackup();
+    return;
+  }catch(err){ console.warn("localStorage indisponível:", err); }
+
+  // 4) Último caso: só memória (sessão). Avisa para usar backup.
+  storageMode = "mem";
+  setTimeout(()=>toast("Sem armazenamento local neste modo — use Exportar/Importar backup."), 600);
+})();
+</script>
+</body>
+</html>
