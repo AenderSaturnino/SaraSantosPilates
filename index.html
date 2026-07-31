@@ -254,6 +254,30 @@
   .ag-openrow{display:flex;align-items:center;gap:8px;padding:8px 8px;border:1px solid var(--line);border-radius:8px;background:#faf7fe;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;}
   .ag-openrow input{width:20px;height:20px;flex:0 0 auto;}
 
+  /* ===== Lista de espera ===== */
+  .mlbl{display:block;margin-top:14px;font-weight:700;font-size:14px;color:var(--ink);}
+  .es-form input{width:100%;padding:13px;border-radius:12px;border:2px solid var(--line);min-height:50px;font-size:17px;background:#fff;color:var(--ink);}
+  .es-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .es-chip{padding:9px 15px;border-radius:999px;background:#eee6f5;color:var(--brand-dark);font-weight:700;font-size:15px;border:2px solid transparent;cursor:pointer;}
+  .es-chip.sel{background:var(--brand);color:#fff;border-color:var(--brand-dark);}
+  .es-chip-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .btn[hidden]{display:none;}
+  .es-list{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+  .es-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:2px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;box-shadow:0 1px 4px rgba(70,40,110,.06);}
+  .es-row.sel{border-color:var(--brand);background:#f3ecfc;box-shadow:0 0 0 2px rgba(123,79,181,.18);}
+  .es-num{width:32px;height:32px;flex:0 0 auto;border-radius:50%;background:var(--brand);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .es-info{min-width:0;flex:1;}
+  .es-nome{font-weight:800;font-size:17px;color:#221a33;}
+  .es-sch{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.3;}
+  .es-tel{font-size:13px;color:var(--muted);margin-top:1px;}
+  .ma-waitlist{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:190px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+  .ma-wait{display:flex;align-items:center;gap:10px;padding:9px 11px;border:2px solid var(--line);border-radius:10px;background:#faf7fe;cursor:pointer;}
+  .ma-wait.sel{border-color:var(--brand);background:#f3ecfc;box-shadow:0 0 0 2px rgba(123,79,181,.15);}
+  .ma-num{width:26px;height:26px;flex:0 0 auto;border-radius:50%;background:var(--brand);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+  .ma-info{min-width:0;flex:1;}
+  .ma-nome{font-weight:800;font-size:15px;color:#221a33;}
+  .ma-sch{font-size:12px;color:var(--muted);margin-top:1px;line-height:1.25;}
+
   /* ===== Reminder (backup) ===== */
   .reminder{border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:14px;line-height:1.4;border:1.5px solid var(--line);}
   .reminder.warn{background:#fff7e6;border-color:#f0c675;color:#7a5200;}
@@ -281,6 +305,7 @@
     <button data-action="nav" data-view="caixa">Caixa</button>
     <button data-action="nav" data-view="fechamento">Fechamento</button>
     <button data-action="nav" data-view="agenda" class="nav-agenda">📅 Agenda</button>
+    <button data-action="nav" data-view="espera">Lista de espera</button>
   </nav>
 </header>
 <main id="app"></main>
@@ -296,8 +321,8 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "2.8";
-const APP_BUILD = "30/07/2026";
+const APP_VERSION = "2.9";
+const APP_BUILD = "31/07/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
 
@@ -347,7 +372,7 @@ function dbSet(key,val){
 /* ---------- State ---------- */
 function emptyMonth(){ return { alunos:[], receitasExtras:[], despesas:[], poupanca:[] }; }
 function emptyYear(){ return { meses: Array.from({length:12}, emptyMonth) }; }
-function initState(){ state = { meta:{lastBackup:null,lastAutoBackup:null}, config:{...DEFAULT_CONFIG}, anos:{ [START_YEAR]: emptyYear() }, agenda:{weeks:{}} }; }
+function initState(){ state = { meta:{lastBackup:null,lastAutoBackup:null}, config:{...DEFAULT_CONFIG}, anos:{ [START_YEAR]: emptyYear() }, agenda:{weeks:{}}, listaEspera:[] }; }
 function ensureShape(){
   if(!state) initState();
   if(!state.meta || typeof state.meta!=="object") state.meta = {};
@@ -365,6 +390,8 @@ function ensureShape(){
   for(const y of Object.keys(state.anos)) normalizaAno(state.anos[y]);
   if(!state.agenda || typeof state.agenda!=="object") state.agenda={weeks:{}};
   if(!state.agenda.weeks || typeof state.agenda.weeks!=="object") state.agenda.weeks={};
+  if(!Array.isArray(state.listaEspera)) state.listaEspera=[];
+  for(const e of state.listaEspera){ if(!e) continue; if(!e.id) e.id=uid(); if(!Array.isArray(e.horarios)) e.horarios=[]; }
   seedHistorico2026();
 }
 /* Consolidado histórico do 1º semestre de 2026 (semeado uma única vez; valores em centavos) */
@@ -516,6 +543,7 @@ function render(){
   else if(view==="fechamento") app.innerHTML=renderCaixa();
   else if(view==="config") app.innerHTML=renderConfig();
   else if(view==="agenda") app.innerHTML=renderAgenda();
+  else if(view==="espera") app.innerHTML=renderEspera();
   window.scrollTo(0,0);
 }
 
@@ -1142,6 +1170,214 @@ function renderAgenda(){
 }
 
 /* =========================================================================
+   LISTA DE ESPERA
+   ========================================================================= */
+const DIA_CURTO = ["Seg","Ter","Qua","Qui","Sex"];
+let esperaForm = null;      // {nome, telefone, horarios:[{d,t}]}
+let esperaSelId = null;     // id do aluno selecionado na lista
+let esperaHorIdx = -1;      // índice do horário selecionado no formulário
+
+function mascaraTelefone(val){
+  const d = String(val==null?"":val).replace(/\D/g,"");
+  if(d.length<=2) return d;
+  return "("+d.slice(0,2)+") "+d.slice(2);
+}
+function horarioLabel(x){ return `${DIA_CURTO[x.d]} ${x.t}h`; }
+
+function renderEspera(){
+  if(!esperaForm) esperaForm = {nome:"", telefone:"", horarios:[]};
+  return `
+  <div class="card es-form">
+    <div class="section-title">Cadastrar aluno na lista de espera</div>
+    <label class="mlbl">Nome do aluno</label>
+    <input type="text" id="esNome" data-live="es-nome" placeholder="Nome do aluno" value="${esc(esperaForm.nome)}" autocomplete="off">
+    <label class="mlbl">Horários</label>
+    <div id="esChipsWrap">${esChipsHTML()}</div>
+    <button class="btn secondary" data-action="es-hor-add" style="margin-top:12px">+ Adicionar horário</button>
+    <label class="mlbl">Telefone</label>
+    <input type="tel" id="esTel" data-live="es-tel" inputmode="tel" placeholder="(DD) 999999999" value="${esc(esperaForm.telefone)}" autocomplete="off">
+    <button class="btn block" data-action="es-add" style="margin-top:16px">Cadastrar</button>
+  </div>
+  <div class="card">
+    <div class="section-title">Lista de espera</div>
+    <div class="toolbar" id="esToolbar">
+      <button class="btn danger" data-action="es-del" ${esperaSelId?"":"disabled"} title="Excluir selecionado">🗑 Excluir</button>
+      <button class="btn secondary" data-action="es-up" ${esperaSelId?"":"hidden"} title="Subir selecionado">⬆ Subir</button>
+      <button class="btn secondary" data-action="es-down" ${esperaSelId?"":"hidden"} title="Descer selecionado">⬇ Descer</button>
+    </div>
+    <div id="esList">${esListHTML()}</div>
+  </div>`;
+}
+
+function esChipsHTML(){
+  const h = esperaForm.horarios||[];
+  if(!h.length) return '<div class="hint">Nenhum horário selecionado.</div>';
+  const chips = h.map((x,i)=>`<button class="es-chip ${i===esperaHorIdx?"sel":""}" data-action="es-hor-select" data-i="${i}" type="button">${horarioLabel(x)}</button>`).join("");
+  let ed="";
+  if(esperaHorIdx>=0 && esperaHorIdx<h.length){
+    ed=`<div class="es-chip-actions">
+      <button class="btn ghost" data-action="es-hor-edit" type="button">✏ Editar</button>
+      <button class="btn danger" data-action="es-hor-del" type="button">🗑 Excluir</button>
+    </div>`;
+  }
+  return `<div class="es-chips">${chips}</div>${ed}`;
+}
+
+function esListHTML(){
+  const list = state.listaEspera||[];
+  if(!list.length) return '<div class="hint">Nenhum aluno na lista de espera.</div>';
+  return list.map((a,i)=>{
+    const sel = a.id===esperaSelId;
+    const sch = (a.horarios||[]).map(horarioLabel).join(" · ");
+    return `<div class="es-row ${sel?"sel":""}" data-action="es-row" data-es-id="${a.id}">
+      <span class="es-num">${i+1}</span>
+      <div class="es-info">
+        <div class="es-nome">${esc(a.nome)}</div>
+        ${sch?`<div class="es-sch">${esc(sch)}</div>`:""}
+        ${a.telefone?`<div class="es-tel">${esc(a.telefone)}</div>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderEsperaRefresh(){
+  const cw=document.getElementById("esChipsWrap"); if(cw) cw.innerHTML=esChipsHTML();
+  const l=document.getElementById("esList"); if(l) l.innerHTML=esListHTML();
+  updateEsToolbar();
+}
+function updateEsToolbar(){
+  const tb=document.getElementById("esToolbar"); if(!tb) return;
+  const on=!!esperaSelId;
+  const del=tb.querySelector('[data-action="es-del"]'); if(del) del.disabled=!on;
+  const up=tb.querySelector('[data-action="es-up"]'); if(up) up.hidden=!on;
+  const down=tb.querySelector('[data-action="es-down"]'); if(down) down.hidden=!on;
+}
+function esHorarioDialog(pre){
+  const dopts=AG_DAYS.map((d,i)=>`<option value="${i}" ${pre&&pre.d===i?"selected":""}>${d}</option>`).join("");
+  const topts=AG_TIMES.map(t=>`<option value="${t}" ${pre&&pre.t===t?"selected":""}>${t}h</option>`).join("");
+  const html=`<h3>${pre?"Editar horário":"Cadastrar horário"}</h3>
+    <label class="mlbl">Dia da semana</label><select id="hDia">${dopts}</select>
+    <label class="mlbl">Horário</label><select id="hHora">${topts}</select>
+    <div class="modal-actions"><button class="btn ghost" data-mres="null">Cancelar</button><button class="btn" data-mres="ok">${pre?"Salvar":"Cadastrar"}</button></div>`;
+  return modalForm(html).then(r=>{
+    if(r.res!=="ok") return null;
+    return {d:parseInt(r.form.hDia,10), t:r.form.hHora};
+  });
+}
+async function esHorarioAdd(){
+  const h=await esHorarioDialog(null);
+  if(!h) return;
+  esperaForm.horarios.push(h);
+  touch(); renderEsperaRefresh();
+}
+async function esHorarioEdit(){
+  if(esperaHorIdx<0 || esperaHorIdx>=esperaForm.horarios.length) return;
+  const cur=esperaForm.horarios[esperaHorIdx];
+  const h=await esHorarioDialog(cur);
+  if(!h) return;
+  esperaForm.horarios[esperaHorIdx]=h;
+  touch(); renderEsperaRefresh();
+}
+function esHorarioDel(){
+  if(esperaHorIdx<0 || esperaHorIdx>=esperaForm.horarios.length) return;
+  esperaForm.horarios.splice(esperaHorIdx,1);
+  esperaHorIdx=-1;
+  touch(); renderEsperaRefresh();
+}
+function esHorarioSelect(i){
+  esperaHorIdx = (esperaHorIdx===i)?-1:i;
+  const cw=document.getElementById("esChipsWrap"); if(cw) cw.innerHTML=esChipsHTML();
+}
+function esAdd(){
+  const nome=capitalizaNome((esperaForm.nome||"").trim());
+  if(!nome){ toast("Informe o nome do aluno."); return; }
+  if((state.listaEspera||[]).some(a=>a.nome.trim().toLowerCase()===nome.toLowerCase())){ toast("Já existe esse aluno na lista de espera."); return; }
+  state.listaEspera.push({id:uid(), nome, telefone:(esperaForm.telefone||"").trim(), horarios:(esperaForm.horarios||[]).slice()});
+  esperaForm={nome:"", telefone:"", horarios:[]};
+  esperaHorIdx=-1;
+  touch(); toast("Aluno adicionado à lista de espera.");
+  renderEsperaRefresh();
+}
+async function esDel(){
+  const a=(state.listaEspera||[]).find(x=>x.id===esperaSelId);
+  if(!a) return;
+  if(!await confirmDialog(`Deseja realmente excluir "${a.nome}" da lista de espera?`)) return;
+  state.listaEspera=state.listaEspera.filter(x=>x.id!==esperaSelId);
+  esperaSelId=null;
+  touch(); toast("Aluno removido da lista de espera.");
+  renderEsperaRefresh();
+}
+function esMove(dir){
+  const list=state.listaEspera||[];
+  const i=list.findIndex(x=>x.id===esperaSelId);
+  if(i<0) return;
+  const j=i+dir;
+  if(j<0||j>=list.length) return;
+  [list[i],list[j]]=[list[j],list[i]];
+  touch(); renderEsperaRefresh();
+}
+function esSelectRow(id){
+  esperaSelId=(esperaSelId===id)?null:id;
+  const l=document.getElementById("esList"); if(l) l.innerHTML=esListHTML();
+  updateEsToolbar();
+}
+
+/* Modal "Adicionar aluno" (aba Alunos) com a Lista de espera */
+function addAlunoModalHTML(){
+  const list=state.listaEspera||[];
+  const rows=list.length ? list.map((a,i)=>{
+    const sch=(a.horarios||[]).map(horarioLabel).join(" · ");
+    return `<div class="ma-wait" data-ma-wait="${a.id}">
+      <span class="ma-num">${i+1}</span>
+      <div class="ma-info">
+        <div class="ma-nome">${esc(a.nome)}</div>
+        ${sch?`<div class="ma-sch">${esc(sch)}</div>`:""}
+      </div>
+    </div>`;
+  }).join("") : '<div class="hint">Nenhum aluno na lista de espera.</div>';
+  return `<h3>Adicionar aluno</h3>
+    <label class="mlbl">Nome do aluno</label>
+    <input type="text" id="maNome" placeholder="Nome do aluno" autocomplete="off">
+    <div class="section-title" style="margin-top:16px">Lista de espera</div>
+    <div class="ma-waitlist">${rows}</div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-mres="null">Cancelar</button>
+      <button class="btn" data-mres="ok">Salvar</button>
+    </div>`;
+}
+function addAlunoDialog(){
+  return new Promise(resolve=>{
+    const ov=document.createElement("div"); ov.className="overlay"; ov.innerHTML=`<div class="modal modal-wide">${addAlunoModalHTML()}</div>`;
+    document.body.appendChild(ov);
+    let selId=null;
+    const done=ok=>{
+      if(!ok){ ov.remove(); resolve(null); return; }
+      const nome=(ov.querySelector("#maNome")?.value||"").trim();
+      ov.remove(); resolve({nome, esperaId:selId});
+    };
+    ov.addEventListener("click",e=>{
+      if(e.target===ov){ done(false); return; }
+      const row=e.target.closest("[data-ma-wait]");
+      if(row){
+        const id=row.dataset.maWait;
+        selId=(selId===id)?null:id;
+        ov.querySelectorAll("[data-ma-wait]").forEach(r=>r.classList.toggle("sel", r.dataset.maWait===selId));
+        const a=selId?(state.listaEspera||[]).find(x=>x.id===selId):null;
+        if(a){
+          const inp=ov.querySelector("#maNome");
+          inp.value=capitalizaNome(a.nome);
+          inp.focus();
+        }
+        return;
+      }
+    });
+    ov.querySelectorAll("[data-mres]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.mres==="ok")));
+    const inp=ov.querySelector("#maNome");
+    if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter") done(true); }); }
+  });
+}
+
+/* =========================================================================
    MODALS / TOAST
    ========================================================================= */
 function toast(msg){
@@ -1192,13 +1428,22 @@ function promptDialog(msg,val){
 function m(){ return curMeses()[curMonth]; }
 
 async function addAluno(){
-  const nome=await promptDialog("Nome do aluno:");
-  if(nome==null) return;
-  const t=capitalizaNome(nome.trim());
+  const res=await addAlunoDialog();
+  if(!res) return;
+  const t=capitalizaNome(res.nome);
   if(t===""){ toast("Informe um nome."); return; }
   if(nomeExiste(m(),t,null)){ toast("Já existe um aluno com esse nome neste mês."); return; }
   m().alunos.push({id:uid(),nome:t,diasSemana:null,valor:null,formaPagamento:"",status:"PENDENTE",valorManual:false});
-  sortAlunos(m()); touch(); toast("Aluno adicionado.");
+  sortAlunos(m());
+  if(res.esperaId){
+    // Remove da Lista de espera SOMENTE depois de adicionado à lista de Alunos
+    const idx=(state.listaEspera||[]).findIndex(x=>x.id===res.esperaId);
+    if(idx>=0){
+      state.listaEspera.splice(idx,1);
+      if(esperaSelId===res.esperaId) esperaSelId=null;
+    }
+  }
+  touch(); toast("Aluno adicionado.");
   renderMonthRefresh();
 }
 async function delAluno(id){
@@ -1630,6 +1875,15 @@ function bindEvents(){
       case "agenda-fechar": agendaFecharDialog(); break;
       case "agenda-abrir": agendaAbrirDialog(); break;
       case "agenda-migrar": agendaMigrar(); break;
+      case "es-hor-add": esHorarioAdd(); break;
+      case "es-hor-edit": esHorarioEdit(); break;
+      case "es-hor-del": esHorarioDel(); break;
+      case "es-hor-select": esHorarioSelect(+el.dataset.i); break;
+      case "es-add": esAdd(); break;
+      case "es-del": esDel(); break;
+      case "es-up": esMove(-1); break;
+      case "es-down": esMove(+1); break;
+      case "es-row": esSelectRow(el.dataset.esId); break;
       case "agenda-att": {
         const st=cycleAgAttend(+el.dataset.day, el.dataset.time, +el.dataset.line);
         el.classList.toggle("on", st==="on"); el.classList.toggle("off", st==="off");
@@ -1666,6 +1920,8 @@ function bindEvents(){
     else if(k==="poup-desc"){ setPoupDescLive(id, el.value); }
     else if(k==="poup-valor"){ setPoupValorLive(id, el.value); }
     else if(k==="agenda-cell"){ setAgendaName(parseInt(el.dataset.day,10), el.dataset.time, parseInt(el.dataset.line,10), el.value); }
+    else if(k==="es-nome"){ if(!esperaForm) esperaForm={nome:"",telefone:"",horarios:[]}; esperaForm.nome=el.value; }
+    else if(k==="es-tel"){ const m2=mascaraTelefone(el.value); if(el.value!==m2) el.value=m2; esperaForm.telefone=m2; }
   });
 
   // Destaque cruzado (linha + coluna) da Agenda ao focar uma célula
