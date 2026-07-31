@@ -1243,6 +1243,8 @@ function esListHTML(){
 function renderEsperaRefresh(){
   const cw=document.getElementById("esChipsWrap"); if(cw) cw.innerHTML=esChipsHTML();
   const l=document.getElementById("esList"); if(l) l.innerHTML=esListHTML();
+  const n=document.getElementById("esNome"); if(n) n.value=esperaForm.nome||"";
+  const t=document.getElementById("esTel"); if(t) t.value=esperaForm.telefone||"";
   updateEsToolbar();
 }
 function updateEsToolbar(){
