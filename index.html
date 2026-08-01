@@ -325,7 +325,7 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "3.0";
+const APP_VERSION = "3.1";
 const APP_BUILD = "31/07/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
@@ -521,7 +521,16 @@ function saldoPoupancaAte(year,monthIdx){
   }
   return s;
 }
-function saldoAcumuladoAte(idx){ const meses=curMeses(); let s=0; for(let i=0;i<=idx;i++) s+=totaisMes(meses[i]).saldoMes; return s; }
+/* O saldo acumulado só passa a contar a partir de julho do ano inicial —
+   o histórico de jan a jun é zerado, então julho = 0 + saldo do mês. */
+const ACUM_INICIO = {ano: START_YEAR, mes: 6};
+function saldoAcumuladoAte(idx){
+  const meses=curMeses();
+  const inicio = (curYear===ACUM_INICIO.ano) ? ACUM_INICIO.mes : 0;
+  let s=0;
+  for(let i=inicio;i<=idx;i++) s+=totaisMes(meses[i]).saldoMes;
+  return s;
+}
 function totaisAno(){
   let pago=0,pix=0,din=0,cart=0,despPagas=0;
   const meses=curMeses();
