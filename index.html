@@ -277,6 +277,10 @@
   .ma-info{min-width:0;flex:1;}
   .ma-nome{font-weight:800;font-size:15px;color:#221a33;}
   .ma-sch{font-size:12px;color:var(--muted);margin-top:1px;line-height:1.25;}
+  .es-err{color:var(--red);font-size:13px;font-weight:600;margin-top:6px;}
+  .es-form.es-edit input{background:#fff7cc;border-color:#e0c400;}
+  .es-form.es-edit .mlbl{color:#8a7200;}
+  .es-form.es-edit .es-chip:not(.sel){background:#fdf3c0;border-color:#e0c400;color:#6b5b00;}
 
   /* ===== Reminder (backup) ===== */
   .reminder{border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:14px;line-height:1.4;border:1.5px solid var(--line);}
@@ -321,7 +325,7 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "2.9.3";
+const APP_VERSION = "2.9.4";
 const APP_BUILD = "31/07/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
@@ -1175,6 +1179,7 @@ function renderAgenda(){
 const DIA_CURTO = ["Seg","Ter","Qua","Qui","Sex"];
 let esperaForm = null;      // {nome, telefone, horarios:[{d,t}]}
 let esperaSelId = null;     // id do aluno selecionado na lista
+let esperaEditId = null;    // id do aluno em edição no formulário
 let esperaHorIdx = -1;      // índice do horário selecionado no formulário
 
 function mascaraTelefone(val){
@@ -1186,21 +1191,26 @@ function horarioLabel(x){ return `${DIA_CURTO[x.d]} ${x.t}h`; }
 
 function renderEspera(){
   if(!esperaForm) esperaForm = {nome:"", telefone:"", horarios:[]};
+  const editando=!!esperaEditId;
   return `
-  <div class="card es-form">
-    <div class="section-title">Cadastrar aluno na lista de espera</div>
+  <div class="card es-form ${editando?"es-edit":""}">
+    <div class="section-title" id="esFormTitle">${editando?"Editar aluno na lista de espera":"Cadastrar aluno na lista de espera"}</div>
     <label class="mlbl">Nome do aluno</label>
     <input type="text" id="esNome" data-live="es-nome" placeholder="Nome do aluno" value="${esc(esperaForm.nome)}" autocomplete="off">
+    <div class="es-err" id="esErrNome"></div>
     <label class="mlbl">Horários</label>
     <div id="esChipsWrap">${esChipsHTML()}</div>
+    <div class="es-err" id="esErrHor"></div>
     <button class="btn secondary" data-action="es-hor-add" style="margin-top:12px">+ Adicionar horário</button>
     <label class="mlbl">Telefone</label>
     <input type="tel" id="esTel" data-live="es-tel" inputmode="tel" placeholder="(DD) 999999999" value="${esc(esperaForm.telefone)}" autocomplete="off">
-    <button class="btn block" data-action="es-add" style="margin-top:16px">Cadastrar</button>
+    <div class="es-err" id="esErrTel"></div>
+    <button class="btn block" id="esSubmitBtn" data-action="es-add" style="margin-top:16px">${editando?"Finalizar Edição":"Cadastrar"}</button>
   </div>
   <div class="card">
     <div class="section-title">Lista de espera</div>
     <div class="toolbar" id="esToolbar">
+      <button class="btn secondary" data-action="es-edit" ${esperaSelId?"":"disabled"} title="Editar selecionado">✏ Editar</button>
       <button class="btn danger" data-action="es-del" ${esperaSelId?"":"disabled"} title="Excluir selecionado">🗑 Excluir</button>
       <button class="btn secondary" data-action="es-up" ${esperaSelId?"":"hidden"} title="Subir selecionado">⬆ Subir</button>
       <button class="btn secondary" data-action="es-down" ${esperaSelId?"":"hidden"} title="Descer selecionado">⬇ Descer</button>
@@ -1245,14 +1255,34 @@ function renderEsperaRefresh(){
   const l=document.getElementById("esList"); if(l) l.innerHTML=esListHTML();
   const n=document.getElementById("esNome"); if(n) n.value=esperaForm.nome||"";
   const t=document.getElementById("esTel"); if(t) t.value=esperaForm.telefone||"";
+  const form=document.querySelector(".es-form"); if(form) form.classList.toggle("es-edit", !!esperaEditId);
+  const title=document.getElementById("esFormTitle"); if(title) title.textContent = esperaEditId ? "Editar aluno na lista de espera" : "Cadastrar aluno na lista de espera";
+  const sb=document.getElementById("esSubmitBtn"); if(sb) sb.textContent = esperaEditId ? "Finalizar Edição" : "Cadastrar";
   updateEsToolbar();
 }
 function updateEsToolbar(){
   const tb=document.getElementById("esToolbar"); if(!tb) return;
   const on=!!esperaSelId;
   const del=tb.querySelector('[data-action="es-del"]'); if(del) del.disabled=!on;
+  const ed=tb.querySelector('[data-action="es-edit"]'); if(ed) ed.disabled=!on || !!esperaEditId;
   const up=tb.querySelector('[data-action="es-up"]'); if(up) up.hidden=!on;
   const down=tb.querySelector('[data-action="es-down"]'); if(down) down.hidden=!on;
+}
+function esSetErr(key,msg){
+  const map={nome:"esErrNome",horarios:"esErrHor",telefone:"esErrTel"};
+  const el=document.getElementById(map[key]); if(el) el.textContent=msg||"";
+}
+const ES_ERRO={nome:"Informe o nome do aluno.",horarios:"Selecione pelo menos 1 horário.",telefone:"Informe o telefone do aluno."};
+function esValidar(){
+  const erros=[];
+  if(!/[\p{L}]/u.test(String(esperaForm.nome||""))) erros.push("nome");
+  if(!(esperaForm.horarios||[]).length) erros.push("horarios");
+  if(String(esperaForm.telefone||"").replace(/\D/g,"").length===0) erros.push("telefone");
+  return erros;
+}
+function esMostraErros(erros){
+  esSetErr("nome",""); esSetErr("horarios",""); esSetErr("telefone","");
+  for(const k of erros) esSetErr(k, ES_ERRO[k]);
 }
 function esHorarioDialog(pre){
   const dopts=AG_DAYS.map((d,i)=>`<option value="${i}" ${pre&&pre.d===i?"selected":""}>${d}</option>`).join("");
@@ -1270,6 +1300,7 @@ async function esHorarioAdd(){
   const h=await esHorarioDialog(null);
   if(!h) return;
   esperaForm.horarios.push(h);
+  esSetErr("horarios","");
   touch(); renderEsperaRefresh();
 }
 async function esHorarioEdit(){
@@ -1278,12 +1309,14 @@ async function esHorarioEdit(){
   const h=await esHorarioDialog(cur);
   if(!h) return;
   esperaForm.horarios[esperaHorIdx]=h;
+  esSetErr("horarios","");
   touch(); renderEsperaRefresh();
 }
 function esHorarioDel(){
   if(esperaHorIdx<0 || esperaHorIdx>=esperaForm.horarios.length) return;
   esperaForm.horarios.splice(esperaHorIdx,1);
   esperaHorIdx=-1;
+  esSetErr("horarios","");
   touch(); renderEsperaRefresh();
 }
 function esHorarioSelect(i){
@@ -1291,8 +1324,10 @@ function esHorarioSelect(i){
   const cw=document.getElementById("esChipsWrap"); if(cw) cw.innerHTML=esChipsHTML();
 }
 function esAdd(){
+  if(esperaEditId){ esFinishEdit(); return; }
+  const erros=esValidar();
+  if(erros.length){ esMostraErros(erros); return; }
   const nome=capitalizaNome((esperaForm.nome||"").trim());
-  if(!nome){ toast("Informe o nome do aluno."); return; }
   if((state.listaEspera||[]).some(a=>a.nome.trim().toLowerCase()===nome.toLowerCase())){ toast("Já existe esse aluno na lista de espera."); return; }
   state.listaEspera.push({id:uid(), nome, telefone:(esperaForm.telefone||"").trim(), horarios:(esperaForm.horarios||[]).slice()});
   esperaForm={nome:"", telefone:"", horarios:[]};
@@ -1302,10 +1337,43 @@ function esAdd(){
   touch(); toast("Aluno adicionado à lista de espera.");
   renderEsperaRefresh();
 }
+function esFinishEdit(){
+  const a=(state.listaEspera||[]).find(x=>x.id===esperaEditId);
+  if(!a){ esperaEditId=null; esperaForm={nome:"",telefone:"",horarios:[]}; esperaHorIdx=-1; renderEsperaRefresh(); return false; }
+  const erros=esValidar();
+  if(erros.length){ esMostraErros(erros); return false; }
+  const nome=capitalizaNome((esperaForm.nome||"").trim());
+  if((state.listaEspera||[]).some(x=>x.id!==esperaEditId && x.nome.trim().toLowerCase()===nome.toLowerCase())){ toast("Já existe esse aluno na lista de espera."); return false; }
+  a.nome=nome;
+  a.telefone=(esperaForm.telefone||"").trim();
+  a.horarios=(esperaForm.horarios||[]).slice();
+  esperaEditId=null;
+  esperaForm={nome:"", telefone:"", horarios:[]};
+  esperaHorIdx=-1;
+  touch(); toast("Alterações salvas.");
+  renderEsperaRefresh();
+  return true;
+}
+function esEdit(){
+  const a=(state.listaEspera||[]).find(x=>x.id===esperaSelId);
+  if(!a) return;
+  if(esperaEditId && esperaEditId!==a.id){
+    if(!esFinishEdit()) return;   // edição atual incompleta: permanece nela
+  }
+  esperaEditId=a.id;
+  esperaForm={nome:a.nome, telefone:a.telefone||"", horarios:(a.horarios||[]).slice()};
+  esperaHorIdx=-1;
+  renderEsperaRefresh();
+}
 async function esDel(){
   const a=(state.listaEspera||[]).find(x=>x.id===esperaSelId);
   if(!a) return;
   if(!await confirmDialog(`Deseja realmente excluir "${a.nome}" da lista de espera?`)) return;
+  if(esperaEditId===esperaSelId){
+    esperaEditId=null;
+    esperaForm={nome:"",telefone:"",horarios:[]};
+    esperaHorIdx=-1;
+  }
   state.listaEspera=state.listaEspera.filter(x=>x.id!==esperaSelId);
   esperaSelId=null;
   touch(); toast("Aluno removido da lista de espera.");
@@ -1321,6 +1389,9 @@ function esMove(dir){
   touch(); renderEsperaRefresh();
 }
 function esSelectRow(id){
+  if(esperaEditId && id!==esperaEditId){
+    if(!esFinishEdit()) return;   // validação falhou: permanece no aluno em edição
+  }
   esperaSelId=(esperaSelId===id)?null:id;
   const l=document.getElementById("esList"); if(l) l.innerHTML=esListHTML();
   updateEsToolbar();
@@ -1884,6 +1955,7 @@ function bindEvents(){
       case "es-hor-del": esHorarioDel(); break;
       case "es-hor-select": esHorarioSelect(+el.dataset.i); break;
       case "es-add": esAdd(); break;
+      case "es-edit": esEdit(); break;
       case "es-del": esDel(); break;
       case "es-up": esMove(-1); break;
       case "es-down": esMove(+1); break;
@@ -1924,8 +1996,8 @@ function bindEvents(){
     else if(k==="poup-desc"){ setPoupDescLive(id, el.value); }
     else if(k==="poup-valor"){ setPoupValorLive(id, el.value); }
     else if(k==="agenda-cell"){ setAgendaName(parseInt(el.dataset.day,10), el.dataset.time, parseInt(el.dataset.line,10), el.value); }
-    else if(k==="es-nome"){ if(!esperaForm) esperaForm={nome:"",telefone:"",horarios:[]}; esperaForm.nome=el.value; }
-    else if(k==="es-tel"){ const m2=mascaraTelefone(el.value); if(el.value!==m2) el.value=m2; esperaForm.telefone=m2; }
+    else if(k==="es-nome"){ if(!esperaForm) esperaForm={nome:"",telefone:"",horarios:[]}; esperaForm.nome=el.value; esSetErr("nome",""); }
+    else if(k==="es-tel"){ const m2=mascaraTelefone(el.value); if(el.value!==m2) el.value=m2; esperaForm.telefone=m2; esSetErr("telefone",""); }
   });
 
   // Destaque cruzado (linha + coluna) da Agenda ao focar uma célula
