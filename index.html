@@ -138,13 +138,11 @@
   .line-item input{padding:10px;border-radius:10px;border:2px solid var(--line);background:#fff;min-height:44px;}
   .line-item .li-desc{flex:1 1 200px;min-width:150px;}
   .line-item .li-valor{flex:0 0 130px;}
-  .line-item .st-toggle{padding:10px 14px;border-radius:999px;font-weight:800;font-size:13px;min-height:44px;border:2px solid transparent;white-space:nowrap;color:#fff;}
-  .st-toggle.pago{background:var(--pago-border);}
-  .st-toggle.pend{background:var(--pend-border);}
+  .line-item .st-switch{flex:0 0 auto;}
   .line-item .icon-btn{margin-left:auto;}
   @media(max-width:560px){
     .line-item .li-valor{flex:1 1 100px;}
-    .line-item .st-toggle{margin-left:auto;}
+    .line-item .st-switch{margin-left:auto;}
   }
   /* ===== Poupança ===== */
   .poup-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:8px;border-radius:10px;border:2px solid var(--line);border-left-width:8px;background:#fff;}
@@ -304,6 +302,7 @@
       <select id="yearSel" class="year-sel" aria-label="Ano"></select>
       <button id="cfgBtn" class="cfg-btn" data-view="config" aria-label="Configurações" title="Configurações">⚙</button>
       <div id="saveInd" class="save-ind">✓ Salvo</div>
+      <div id="appVer" class="save-ind" aria-label="Versão"></div>
     </div>
   </div>
   <nav id="nav">
@@ -328,7 +327,7 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "3.1";
+const APP_VERSION = "3.2";
 const APP_BUILD = "31/07/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
@@ -703,7 +702,7 @@ function renderCaixaMes(){
     despRows+=`<div class="line-item ${on?"pago":"pend"}" data-id="${d.id}">
       <input class="li-desc" type="text" data-live="desp-desc" data-id="${d.id}" placeholder="Descrição da despesa" value="${esc(d.descricao)}">
       <input class="li-valor" type="text" inputmode="decimal" data-live="desp-valor" data-field="desp-valor" data-id="${d.id}" placeholder="R$ 0,00" value="${d.valor?fmt(d.valor):""}">
-      <button class="st-toggle ${on?"pago":"pend"}" data-action="desp-status" data-id="${d.id}">${on?"PAGO":"PENDENTE"}</button>
+      <button class="st-switch ${on?"pago":""}" data-action="desp-status" data-id="${d.id}" data-status="${on?"PENDENTE":"PAGO"}" role="switch" aria-checked="${on?"true":"false"}" title="${on?"Pago — toque para reabrir":"Aberto — toque para marcar como pago"}"><span class="st-track"></span><span class="st-switch-label">${on?"PAGO":"PENDENTE"}</span></button>
       <button class="icon-btn del" data-action="desp-del" data-id="${d.id}" title="Remover">🗑</button>
     </div>`;
   }
@@ -991,6 +990,12 @@ function renderConfig(){
     <p class="hint">Alterar um valor vale apenas para novos preenchimentos. Meses já registrados preservam o valor da época.</p>
   </div>
   <div class="card">
+    <div class="section-title">Sobre o aplicativo</div>
+    <p class="hint" style="margin-top:0">Versão <b>${APP_VERSION}</b> — ${APP_BUILD}</p>
+    <button class="btn secondary" data-action="app-reload">🔄 Buscar atualização / Recarregar</button>
+    <p class="hint">Quando uma nova versão for publicada, você verá um aviso ao abrir o app (conectada à internet). Se quiser forçar, toque no botão acima. <b>Seus dados não são apagados</b> ao atualizar.</p>
+  </div>
+  <div class="card">
     <div class="section-title">Formas de pagamento</div>
     <div>${formas}</div>
     <p class="hint">Fixas nesta versão.</p>
@@ -1020,12 +1025,6 @@ function renderConfig(){
     <div class="section-title">Salvamento</div>
     <button class="btn secondary" data-action="save-now">Salvar agora</button>
     <p class="hint">Os dados são salvos automaticamente a cada alteração. Este botão força o salvamento imediato.</p>
-  </div>
-  <div class="card">
-    <div class="section-title">Sobre o aplicativo</div>
-    <p class="hint" style="margin-top:0">Versão <b>${APP_VERSION}</b> — ${APP_BUILD}</p>
-    <button class="btn secondary" data-action="app-reload">🔄 Buscar atualização / Recarregar</button>
-    <p class="hint">Quando uma nova versão for publicada, você verá um aviso ao abrir o app (conectada à internet). Se quiser forçar, toque no botão acima. <b>Seus dados não são apagados</b> ao atualizar.</p>
   </div>`;
 }
 
@@ -1603,7 +1602,34 @@ async function delDespesa(id){
   if(!await confirmDialog(`Deseja realmente excluir a despesa "${desc}" (${val}, ${st}) de ${MESES[curMonth]}? Esta ação não poderá ser desfeita.`)) return;
   m().despesas=m().despesas.filter(x=>x.id!==id); touch(); renderMonthRefresh();
 }
-function toggleDespesa(id){ const d=m().despesas.find(x=>x.id===id); if(!d) return; d.status=d.status==="PAGO"?"PENDENTE":"PAGO"; touch(); renderMonthRefresh(); }
+async function toggleDespesa(id){
+  const d=m().despesas.find(x=>x.id===id); if(!d) return;
+  const novo = d.status==="PAGO" ? "PENDENTE" : "PAGO";
+  const desc=(d.descricao||"").trim()||"esta despesa";
+  const val=d.valor?fmt(d.valor):"R$ 0,00";
+  const msg = novo==="PAGO"
+    ? `Confirmar PAGAMENTO da despesa "${desc}" (${val})?`
+    : `Reabrir o pagamento da despesa "${desc}" (${val})? Deixará como PENDENTE.`;
+  if(!await confirmDialog(msg)) return;
+  d.status=novo;
+  touch();
+  const on=novo==="PAGO";
+  const row=document.querySelector('.line-item[data-id="'+id+'"]');
+  if(row){
+    row.classList.toggle("pago", on);
+    row.classList.toggle("pend", !on);
+    const sw=row.querySelector(".st-switch");
+    if(sw){
+      sw.classList.toggle("pago", on);
+      sw.dataset.status = on?"PENDENTE":"PAGO";
+      sw.setAttribute("aria-checked", on?"true":"false");
+      sw.title = on?"Pago — toque para reabrir":"Aberto — toque para marcar como pago";
+      const lab=sw.querySelector(".st-switch-label");
+      if(lab) lab.textContent = on?"PAGO":"PENDENTE";
+    }
+  }
+  refreshComputed();
+}
 function setDespDescLive(id,val){ const d=m().despesas.find(x=>x.id===id); if(!d) return; d.descricao=val; touch(); refreshComputed(); }
 function setDespValorLive(id,val){ const d=m().despesas.find(x=>x.id===id); if(!d) return; const c=parseCents(val); if(c!=null&&c<0) return; d.valor=c||0; touch(); refreshComputed(); }
 
@@ -2090,6 +2116,7 @@ function bindEvents(){
   bindEvents();
   render();
   setSaved(true);
+  const av=document.getElementById("appVer"); if(av) av.textContent="v"+APP_VERSION;
   avisaAtualizacao();                         // avisa se a versão publicada mudou desde a última abertura
   setInterval(checkLembreteBackup, 5*60*1000);   // verifica o lembrete de backup das 18h a cada 5 min
 
