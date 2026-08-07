@@ -327,8 +327,8 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "3.2";
-const APP_BUILD = "31/07/2026";
+const APP_VERSION = "3.3";
+const APP_BUILD = "07/08/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
 
@@ -497,7 +497,7 @@ function totaisMes(m){
     total,pago,receber,cPago,cPend,cTotal,
     pix,din,cart,formaSoma:pix+din+cart,
     salarioSara:pago,outras,entradas,
-    despPagas,despPend,
+    despPagas,despPend,despTotal:despPagas+despPend,
     poupDep:pou.dep,poupSaque:pou.saq,poupLiq:pou.liq,
     saldoMes:entradas-despPagas-pou.liq
   };
@@ -680,32 +680,46 @@ function poupRowHTML(p){
     </div>`;
 }
 
+/* Linha de despesa (reutilizada no add sem re-render) */
+function despRowHTML(d){
+  const on = d.status==="PAGO";
+  return `<div class="line-item ${on?"pago":"pend"}" data-id="${d.id}">
+    <input class="li-desc" type="text" data-live="desp-desc" data-id="${d.id}" placeholder="Descrição da despesa" value="${esc(d.descricao)}">
+    <input class="li-valor" type="text" inputmode="decimal" data-live="desp-valor" data-field="desp-valor" data-id="${d.id}" placeholder="R$ 0,00" value="${d.valor?fmt(d.valor):""}">
+    <button class="st-switch ${on?"pago":""}" data-action="desp-status" data-id="${d.id}" data-status="${on?"PENDENTE":"PAGO"}" role="switch" aria-checked="${on?"true":"false"}" title="${on?"Pago — toque para reabrir":"Aberto — toque para marcar como pago"}"><span class="st-track"></span><span class="st-switch-label">${on?"PAGO":"PENDENTE"}</span></button>
+    <button class="icon-btn del" data-action="desp-del" data-id="${d.id}" title="Remover">🗑</button>
+  </div>`;
+}
+/* Linha de receita extra (reutilizada no add sem re-render) */
+function recRowHTML(r){
+  return `<div class="line-item" data-id="${r.id}">
+    <input class="li-desc" type="text" data-live="rec-desc" data-id="${r.id}" placeholder="Descrição (ex.: Freelancer)" value="${esc(r.descricao)}">
+    <input class="li-valor" type="text" inputmode="decimal" data-live="rec-valor" data-field="rec-valor" data-id="${r.id}" placeholder="R$ 0,00" value="${r.valor?fmt(r.valor):""}">
+    <button class="icon-btn del" data-action="rec-del" data-id="${r.id}" title="Remover">🗑</button>
+  </div>`;
+}
+/* Ordenação das despesas para exibição: pendentes sempre no topo, pagas no fim */
+function sortedDespesas(m){
+  return (m.despesas||[]).slice().sort((a,b)=>(a.status==="PAGO"?1:0)-(b.status==="PAGO"?1:0));
+}
+
 /* ----- Caixa (controle financeiro do mês: receitas + despesas) ----- */
 function renderCaixaMes(){
   const t=totaisMes(curMeses()[curMonth]);
   const acum=saldoAcumuladoAte(curMonth);
+  const acumAnt = curMonth===0 ? 0 : saldoAcumuladoAte(curMonth-1);
   const m=curMeses()[curMonth];
+  const despTotal=t.despTotal;
+  const totalMes=t.total+t.outras;
+  const dinheiroEntrou=t.pago+t.outras;
+  const mesFechar=acumAnt+totalMes-despTotal;
 
   // Receitas extras
   let recRows="";
-  for(const r of m.receitasExtras){
-    recRows+=`<div class="line-item" data-id="${r.id}">
-      <input class="li-desc" type="text" data-live="rec-desc" data-id="${r.id}" placeholder="Descrição (ex.: Freelancer)" value="${esc(r.descricao)}">
-      <input class="li-valor" type="text" inputmode="decimal" data-live="rec-valor" data-field="rec-valor" data-id="${r.id}" placeholder="R$ 0,00" value="${r.valor?fmt(r.valor):""}">
-      <button class="icon-btn del" data-action="rec-del" data-id="${r.id}" title="Remover">🗑</button>
-    </div>`;
-  }
-  // Despesas
+  for(const r of m.receitasExtras) recRows+=recRowHTML(r);
+  // Despesas (pendentes no topo, pagas no fim)
   let despRows="";
-  for(const d of m.despesas){
-    const on = d.status==="PAGO";
-    despRows+=`<div class="line-item ${on?"pago":"pend"}" data-id="${d.id}">
-      <input class="li-desc" type="text" data-live="desp-desc" data-id="${d.id}" placeholder="Descrição da despesa" value="${esc(d.descricao)}">
-      <input class="li-valor" type="text" inputmode="decimal" data-live="desp-valor" data-field="desp-valor" data-id="${d.id}" placeholder="R$ 0,00" value="${d.valor?fmt(d.valor):""}">
-      <button class="st-switch ${on?"pago":""}" data-action="desp-status" data-id="${d.id}" data-status="${on?"PENDENTE":"PAGO"}" role="switch" aria-checked="${on?"true":"false"}" title="${on?"Pago — toque para reabrir":"Aberto — toque para marcar como pago"}"><span class="st-track"></span><span class="st-switch-label">${on?"PAGO":"PENDENTE"}</span></button>
-      <button class="icon-btn del" data-action="desp-del" data-id="${d.id}" title="Remover">🗑</button>
-    </div>`;
-  }
+  for(const d of sortedDespesas(m)) despRows+=despRowHTML(d);
   // Poupança (movimentações do mês)
   let poupRows="";
   for(const p of m.poupanca) poupRows+=poupRowHTML(p);
@@ -718,14 +732,14 @@ function renderCaixaMes(){
   <div class="card">
     <div class="section-title">Controle financeiro</div>
     <div class="grid cards" style="margin-bottom:16px">
-      <div class="ind pos"><div class="lbl">Salário Sara (alunos pagos)</div><div class="val" id="fin-sara">${fmtCard(t.salarioSara)}</div></div>
-      <div class="ind"><div class="lbl">Outras receitas</div><div class="val" id="fin-outras">${fmtCard(t.outras)}</div></div>
-      <div class="ind accent"><div class="lbl">Total de entradas</div><div class="val" id="fin-entradas">${fmtCard(t.entradas)}</div></div>
-      <div class="ind neg"><div class="lbl">Despesas pagas</div><div class="val" id="fin-desppagas">${fmtCard(t.despPagas)}</div></div>
-      <div class="ind"><div class="lbl">Despesas pendentes</div><div class="val" id="fin-desppend">${fmtCard(t.despPend)}</div></div>
-      <div class="ind ${t.saldoMes>=0?"pos":"neg"}"><div class="lbl">Saldo do mês</div><div class="val" id="fin-saldomes">${fmtCard(t.saldoMes)}</div></div>
-      <div class="ind ${acum>=0?"pos":"neg"}"><div class="lbl">Saldo acumulado</div><div class="val" id="fin-saldoacum">${fmtCard(acum)}</div></div>
-      <div class="ind poup"><div class="lbl">Saldo da poupança</div><div class="val" id="fin-poupanca">${fmtCard(poupSaldo)}</div></div>
+      <div class="ind accent"><div class="lbl">Total do mês</div><div class="val" id="fin-totalmes">${fmtCard(totalMes)}</div></div>
+      <div class="ind pos"><div class="lbl">Dinheiro Entrou</div><div class="val" id="fin-entrou">${fmtCard(dinheiroEntrou)}</div></div>
+      <div class="ind neg"><div class="lbl">Total Despesas</div><div class="val" id="fin-desp-total">${fmtCard(despTotal)}</div></div>
+      <div class="ind neg"><div class="lbl">Despesas Pagas</div><div class="val" id="fin-desppagas">${fmtCard(t.despPagas)}</div></div>
+      <div class="ind"><div class="lbl">Despesas Pendentes</div><div class="val" id="fin-desppend">${fmtCard(t.despPend)}</div></div>
+      <div class="ind ${t.receber>0?"neg":""}"><div class="lbl">Valor a receber</div><div class="val" id="fin-receber">${fmtCard(t.receber)}</div></div>
+      <div class="ind ${acum>=0?"pos":"neg"}"><div class="lbl">Em caixa</div><div class="val" id="fin-emcaixa">${fmtCard(acum)}</div></div>
+      <div class="ind ${mesFechar>=0?"pos":"neg"}"><div class="lbl">Mês vai fechar em</div><div class="val" id="fin-mesfechar">${fmtCard(mesFechar)}</div></div>
     </div>
 
     <div class="section-title" style="margin-top:8px">Outras receitas</div>
@@ -792,13 +806,17 @@ function refreshComputed(){
   if(view!=="alunos" && view!=="caixa") return;
   const t=totaisMes(curMeses()[curMonth]);
   const acum=saldoAcumuladoAte(curMonth);
+  const acumAnt = curMonth===0 ? 0 : saldoAcumuladoAte(curMonth-1);
   const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
   set("ind-total",fmtCard(t.total)); set("ind-pago",fmtCard(t.pago)); set("ind-receber",fmtCard(t.receber));
   set("ind-cpago",t.cPago); set("ind-cpend",t.cPend); set("ind-ctotal",t.cTotal);
-  set("fin-sara",fmtCard(t.salarioSara)); set("fin-outras",fmtCard(t.outras)); set("fin-entradas",fmtCard(t.entradas));
+  set("fin-totalmes",fmtCard(t.total + t.outras));
+  set("fin-entrou",fmtCard(t.pago + t.outras));
+  set("fin-desp-total",fmtCard(t.despTotal));
   set("fin-desppagas",fmtCard(t.despPagas)); set("fin-desppend",fmtCard(t.despPend));
-  set("fin-saldomes",fmtCard(t.saldoMes)); set("fin-saldoacum",fmtCard(acum));
-  set("fin-poupanca",fmtCard(saldoPoupancaAte(curYear,curMonth)));
+  set("fin-receber",fmtCard(t.receber));
+  set("fin-emcaixa",fmtCard(acum));
+  set("fin-mesfechar",fmtCard(acumAnt + t.total + t.outras - t.despTotal));
   updatePoupBal();
 }
 
@@ -1593,7 +1611,28 @@ async function encerrarMes(){
 }
 
 /* Despesas */
-function addDespesa(){ m().despesas.push({id:uid(),descricao:"",valor:0,status:"PENDENTE"}); touch(); renderMonthRefresh(); toast("Despesa adicionada."); }
+function addDespesa(){
+  const p={id:uid(),descricao:"",valor:0,status:"PENDENTE"};
+  m().despesas.push(p); touch();
+  const list=document.getElementById("desp-list");
+  if(list){
+    if(list.querySelector(".hint")) list.innerHTML="";
+    // nova despesa é PENDENTE → entra no fim do grupo de pendentes (antes da 1ª paga)
+    const firstPago=list.querySelector(".line-item.pago");
+    if(firstPago) firstPago.insertAdjacentHTML("beforebegin", despRowHTML(p));
+    else list.insertAdjacentHTML("beforeend", despRowHTML(p));
+    const row=list.querySelector('.line-item[data-id="'+p.id+'"]');
+    if(row){
+      row.scrollIntoView({block:"center",behavior:"smooth"});
+      const inp=row.querySelector(".li-desc");
+      if(inp) inp.focus();
+    }
+    refreshComputed();
+  } else {
+    renderMonthRefresh();
+  }
+  toast("Despesa adicionada.");
+}
 async function delDespesa(id){
   const d=m().despesas.find(x=>x.id===id); if(!d) return;
   const desc=(d.descricao||"").trim()||"despesa sem descrição";
@@ -1614,7 +1653,8 @@ async function toggleDespesa(id){
   d.status=novo;
   touch();
   const on=novo==="PAGO";
-  const row=document.querySelector('.line-item[data-id="'+id+'"]');
+  const list=document.getElementById("desp-list");
+  const row=list && list.querySelector('.line-item[data-id="'+id+'"]');
   if(row){
     row.classList.toggle("pago", on);
     row.classList.toggle("pend", !on);
@@ -1627,11 +1667,26 @@ async function toggleDespesa(id){
       const lab=sw.querySelector(".st-switch-label");
       if(lab) lab.textContent = on?"PAGO":"PENDENTE";
     }
+    // reorganiza: pagas no fim, pendentes no topo
+    if(on){
+      list.appendChild(row);
+    } else {
+      const firstPago=list.querySelector(".line-item.pago");
+      if(firstPago) firstPago.parentNode.insertBefore(row, firstPago);
+      else list.appendChild(row);
+    }
   }
   refreshComputed();
 }
 function setDespDescLive(id,val){ const d=m().despesas.find(x=>x.id===id); if(!d) return; d.descricao=val; touch(); refreshComputed(); }
 function setDespValorLive(id,val){ const d=m().despesas.find(x=>x.id===id); if(!d) return; const c=parseCents(val); if(c!=null&&c<0) return; d.valor=c||0; touch(); refreshComputed(); }
+/* reformata o valor no próprio campo, sem re-render (preserva a rolagem) */
+function reformatDespValor(id){
+  const d=m().despesas.find(x=>x.id===id); if(!d) return;
+  const inp=document.querySelector('.line-item[data-id="'+id+'"] .li-valor');
+  if(inp) inp.value = d.valor?fmt(d.valor):"";
+  refreshComputed();
+}
 
 /* ---- Migração de despesas para o próximo mês ---- */
 function padParc(orig,n){ return String(n).padStart(orig.length>1?2:1,"0"); }
@@ -1683,7 +1738,25 @@ async function migrarDespesas(){
 }
 
 /* Receitas extras */
-function addReceita(){ m().receitasExtras.push({id:uid(),descricao:"",valor:0}); touch(); renderMonthRefresh(); toast("Receita adicionada."); }
+function addReceita(){
+  const p={id:uid(),descricao:"",valor:0};
+  m().receitasExtras.push(p); touch();
+  const list=document.getElementById("rec-list");
+  if(list){
+    if(list.querySelector(".hint")) list.innerHTML="";
+    list.insertAdjacentHTML("beforeend", recRowHTML(p));
+    const row=list.querySelector('.line-item[data-id="'+p.id+'"]');
+    if(row){
+      row.scrollIntoView({block:"center",behavior:"smooth"});
+      const inp=row.querySelector(".li-desc");
+      if(inp) inp.focus();
+    }
+    refreshComputed();
+  } else {
+    renderMonthRefresh();
+  }
+  toast("Receita adicionada.");
+}
 async function delReceita(id){
   const r=m().receitasExtras.find(x=>x.id===id); if(!r) return;
   const desc=(r.descricao||"").trim()||"receita extra sem descrição";
@@ -1693,6 +1766,13 @@ async function delReceita(id){
 }
 function setRecDescLive(id,val){ const r=m().receitasExtras.find(x=>x.id===id); if(!r) return; r.descricao=val; touch(); refreshComputed(); }
 function setRecValorLive(id,val){ const r=m().receitasExtras.find(x=>x.id===id); if(!r) return; const c=parseCents(val); if(c!=null&&c<0) return; r.valor=c||0; touch(); refreshComputed(); }
+/* reformata o valor no próprio campo, sem re-render (preserva a rolagem) */
+function reformatRecValor(id){
+  const r=m().receitasExtras.find(x=>x.id===id); if(!r) return;
+  const inp=document.querySelector('.line-item[data-id="'+id+'"] .li-valor');
+  if(inp) inp.value = r.valor?fmt(r.valor):"";
+  refreshComputed();
+}
 
 /* Poupança */
 function addPoupanca(tipo){
@@ -2062,8 +2142,8 @@ function bindEvents(){
     else if(f==="aluno-dias"){ setAlunoDias(id, el.value); }
     else if(f==="aluno-valor"){ renderMonthRefresh(); }        // reformat
     else if(f==="aluno-forma"){ setAlunoForma(id, el.value); }
-    else if(f==="desp-valor"){ renderMonthRefresh(); }
-    else if(f==="rec-valor"){ renderMonthRefresh(); }
+    else if(f==="desp-valor"){ reformatDespValor(id); }
+    else if(f==="rec-valor"){ reformatRecValor(id); }
     else if(f==="poup-valor"){ reformatPoupValor(id); }
     else if(f==="cfg"){ setConfig(parseInt(el.dataset.dias,10), el.value); }
   });
