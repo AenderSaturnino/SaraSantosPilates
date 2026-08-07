@@ -86,6 +86,8 @@
   /* ===== Indicators ===== */
   .grid{display:grid;gap:7px;}
   .grid.cards{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));}
+  .fin-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .fin-gap{height:20px;}
   .ind{background:var(--surface);border-radius:10px;box-shadow:0 1px 4px rgba(70,40,110,.07);padding:6px 9px;border-left:3px solid var(--brand);min-width:0;overflow:hidden;}
   .ind .lbl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:1px;line-height:1.12;}
   .ind .val{font-size:13px;font-weight:800;line-height:1.18;white-space:nowrap;letter-spacing:-.2px;font-variant-numeric:tabular-nums;}
@@ -327,7 +329,7 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "3.3";
+const APP_VERSION = "3.3.1";
 const APP_BUILD = "07/08/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
@@ -731,14 +733,16 @@ function renderCaixaMes(){
 
   <div class="card">
     <div class="section-title">Controle financeiro</div>
-    <div class="grid cards" style="margin-bottom:16px">
-      <div class="ind accent"><div class="lbl">Total do mês</div><div class="val" id="fin-totalmes">${fmtCard(totalMes)}</div></div>
-      <div class="ind pos"><div class="lbl">Dinheiro Entrou</div><div class="val" id="fin-entrou">${fmtCard(dinheiroEntrou)}</div></div>
+    <div class="grid fin-grid" style="margin-bottom:16px">
+      <div class="ind accent"><div class="lbl">Total do Mês</div><div class="val" id="fin-totalmes">${fmtCard(totalMes)}</div></div>
       <div class="ind neg"><div class="lbl">Total Despesas</div><div class="val" id="fin-desp-total">${fmtCard(despTotal)}</div></div>
+      <div class="ind pos"><div class="lbl">Dinheiro Entrou</div><div class="val" id="fin-entrou">${fmtCard(dinheiroEntrou)}</div></div>
       <div class="ind neg"><div class="lbl">Despesas Pagas</div><div class="val" id="fin-desppagas">${fmtCard(t.despPagas)}</div></div>
+      <div class="fin-gap" aria-hidden="true"></div>
+      <div class="fin-gap" aria-hidden="true"></div>
+      <div class="ind ${t.receber>0?"neg":""}"><div class="lbl">Valor a Receber</div><div class="val" id="fin-receber">${fmtCard(t.receber)}</div></div>
       <div class="ind"><div class="lbl">Despesas Pendentes</div><div class="val" id="fin-desppend">${fmtCard(t.despPend)}</div></div>
-      <div class="ind ${t.receber>0?"neg":""}"><div class="lbl">Valor a receber</div><div class="val" id="fin-receber">${fmtCard(t.receber)}</div></div>
-      <div class="ind ${acum>=0?"pos":"neg"}"><div class="lbl">Em caixa</div><div class="val" id="fin-emcaixa">${fmtCard(acum)}</div></div>
+      <div class="ind ${acum>=0?"pos":"neg"}"><div class="lbl">Em Caixa</div><div class="val" id="fin-emcaixa">${fmtCard(acum)}</div></div>
       <div class="ind ${mesFechar>=0?"pos":"neg"}"><div class="lbl">Mês vai fechar em</div><div class="val" id="fin-mesfechar">${fmtCard(mesFechar)}</div></div>
     </div>
 
