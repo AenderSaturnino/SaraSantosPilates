@@ -329,8 +329,8 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const FORMAS = [["","—"],["PIX","PIX"],["DINHEIRO","Dinheiro"],["CARTAO","Cartão"]];
 const DEFAULT_CONFIG = {1:12000, 2:18000, 3:22000, 4:33000};
 const START_YEAR = 2026;
-const APP_VERSION = "3.3.3";
-const APP_BUILD = "07/08/2026";
+const APP_VERSION = "3.4";
+const APP_BUILD = "10/08/2026";
 const AG_TIMES = ["08","09","10","14","15","16","17","18","19","20","21"];
 const AG_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta"];
 
@@ -535,6 +535,16 @@ function saldoAcumuladoAte(idx){
   for(let i=inicio;i<=idx;i++) s+=totaisMes(meses[i]).saldoMes;
   return s;
 }
+/* "Mês vai fechar em" acumulado: soma de (todas as entradas − todas as despesas)
+   de cada mês, independente de status e ignorando a poupança, a partir do mesmo
+   ponto do "Em Caixa" (julho/2026). */
+function fechamentoAcumuladoAte(idx){
+  const meses=curMeses();
+  const inicio = (curYear===ACUM_INICIO.ano) ? ACUM_INICIO.mes : 0;
+  let s=0;
+  for(let i=inicio;i<=idx;i++){ const t=totaisMes(meses[i]); s+=(t.total+t.outras)-t.despTotal; }
+  return s;
+}
 function totaisAno(){
   let pago=0,pix=0,din=0,cart=0,despPagas=0;
   const meses=curMeses();
@@ -709,12 +719,11 @@ function sortedDespesas(m){
 function renderCaixaMes(){
   const t=totaisMes(curMeses()[curMonth]);
   const acum=saldoAcumuladoAte(curMonth);
-  const acumAnt = curMonth===0 ? 0 : saldoAcumuladoAte(curMonth-1);
   const m=curMeses()[curMonth];
   const despTotal=t.despTotal;
   const totalMes=t.total+t.outras;
   const dinheiroEntrou=t.pago+t.outras;
-  const mesFechar=acumAnt+totalMes-despTotal;
+  const mesFechar=fechamentoAcumuladoAte(curMonth-1)+totalMes-despTotal;
 
   // Receitas extras
   let recRows="";
@@ -745,6 +754,7 @@ function renderCaixaMes(){
       <div class="ind"><div class="lbl">Despesas Pendentes</div><div class="val" id="fin-desppend">${fmtCard(t.despPend)}</div></div>
       <div class="ind ${mesFechar>=0?"pos":"neg"}"><div class="lbl">Mês vai fechar em</div><div class="val" id="fin-mesfechar">${fmtCard(mesFechar)}</div></div>
     </div>
+    <p class="hint" style="margin-top:0">“Mês vai fechar em” não inclui a poupança: parte do fechamento do mês anterior, soma todas as entradas (pagas e pendentes, inclusive receitas extras) e subtrai todas as despesas (pagas e pendentes).</p>
 
     <div class="section-title" style="margin-top:8px">Outras receitas</div>
     <div id="rec-list">${recRows || '<div class="hint">Nenhuma receita extra. Ex.: Freelancer.</div>'}</div>
@@ -810,7 +820,6 @@ function refreshComputed(){
   if(view!=="alunos" && view!=="caixa") return;
   const t=totaisMes(curMeses()[curMonth]);
   const acum=saldoAcumuladoAte(curMonth);
-  const acumAnt = curMonth===0 ? 0 : saldoAcumuladoAte(curMonth-1);
   const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
   set("ind-total",fmtCard(t.total)); set("ind-pago",fmtCard(t.pago)); set("ind-receber",fmtCard(t.receber));
   set("ind-cpago",t.cPago); set("ind-cpend",t.cPend); set("ind-ctotal",t.cTotal);
@@ -820,7 +829,7 @@ function refreshComputed(){
   set("fin-desppagas",fmtCard(t.despPagas)); set("fin-desppend",fmtCard(t.despPend));
   set("fin-receber",fmtCard(t.receber));
   set("fin-emcaixa",fmtCard(acum));
-  set("fin-mesfechar",fmtCard(acumAnt + t.total + t.outras - t.despTotal));
+  set("fin-mesfechar",fmtCard(fechamentoAcumuladoAte(curMonth-1) + t.total + t.outras - t.despTotal));
   updatePoupBal();
 }
 
